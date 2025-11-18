@@ -7,7 +7,7 @@ export default function Index() {
         flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#f54927"
+        backgroundColor: "blue"
       }}
     >
       <Text style={{
