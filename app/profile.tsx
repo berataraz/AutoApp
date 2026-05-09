@@ -1,11 +1,13 @@
+import { uploadImageToServer } from "@/services/userProfileService";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import type { ImageSourcePropType } from "react-native";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -28,6 +30,8 @@ interface Vehicle {
   brand: string;
   model: string;
   year: number;
+  licensePlate?: string;
+  imageUrl?: string;
 }
 
 interface Post {
@@ -49,6 +53,8 @@ interface Route {
 interface UserProfile {
   name: string;
   username: string;
+  profilePhoto: string | null;
+  coverPhoto: string | null;
   followerCount: number;
   followingCount: number;
   garage: Vehicle[];
@@ -56,13 +62,77 @@ interface UserProfile {
   routes: Route[];
 }
 
+// HTTP -> HTTPS dönüşümü için yardımcı fonksiyon
+const getSecureImageUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  return url.replace("http://", "https://");
+};
+
 export default function Profile() {
   const router = useRouter();
 
-  // profil verilerini tutacağımız stateler
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // --- AKILLI VE TEK (DRY) FOTOĞRAF SEÇİCİ FONKSİYON ---
+  const handleImageSelection = async (isCover: boolean, fromCamera: boolean) => {
+    // İzinleri kontrol et
+    const permissionResult = fromCamera
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      Alert.alert("Hata", "Gerekli izinler verilmedi.");
+      return;
+    }
+
+    // Kamera/Galeri ayarlarını belirle (Kapak ise 16:9, Profil ise 1:1)
+    const options: ImagePicker.ImagePickerOptions = {
+      allowsEditing: true,
+      aspect: isCover ? [16, 9] : [1, 1],
+      quality: 0.5,
+    };
+
+    // İsteğe göre Kamera veya Galeriyi aç
+    const result = fromCamera
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+
+      // Ekranı anında güncelle (Hızlı UX)
+      setProfile((prev) => {
+        if (!prev) return prev;
+        return isCover ? { ...prev, coverPhoto: uri } : { ...prev, profilePhoto: uri };
+      });
+
+      // Arka planda sunucuya yükle
+      const endpoint = isCover ? "/profile/uploadCoverPhoto" : "/profile/uploadProfilePhoto";
+      const photoType = isCover ? "cover" : "profile";
+
+      uploadImageToServer(uri, endpoint, photoType);
+    }
+  };
+
+  // --- PROFİL VE KAPAK MENÜLERİ ---
+  const handleProfilePhotoPress = () => {
+    Alert.alert("Profil Fotoğrafı Seç", "Bir seçenek belirleyin.", [
+      { text: "Fotoğraf Çek", onPress: () => handleImageSelection(false, true) },
+      { text: "Galeriden Seç", onPress: () => handleImageSelection(false, false) },
+      { text: "İptal", style: "cancel" },
+    ]);
+  };
+
+  const handleCoverPhotoPress = () => {
+    Alert.alert("Kapak Fotoğrafı Seç", "Bir seçenek belirleyin.", [
+      { text: "Fotoğraf Çek", onPress: () => handleImageSelection(true, true) },
+      { text: "Galeriden Seç", onPress: () => handleImageSelection(true, false) },
+      { text: "İptal", style: "cancel" },
+    ]);
+  };
+
+  // --- VERİ ÇEKME ---
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -86,6 +156,7 @@ export default function Profile() {
     fetchProfileData();
   }, []);
 
+  // --- YÜKLENİYOR VE BOŞ DURUM EKRANLARI ---
   if (loading) {
     return (
       <View
@@ -101,7 +172,6 @@ export default function Profile() {
     );
   }
 
-  // Eğer profil boş geldiyse (hata olduysa)
   if (!profile) {
     return (
       <View
@@ -117,6 +187,7 @@ export default function Profile() {
     );
   }
 
+  // --- ARAYÜZ (UI) ---
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -124,7 +195,18 @@ export default function Profile() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.coverWrap}>
-          <Image source={coverImage} style={styles.coverImage} />
+          <Pressable style={{ flex: 1 }} onPress={handleCoverPhotoPress}>
+            <Image
+              source={
+                profile?.coverPhoto
+                  ? { uri: getSecureImageUrl(profile.coverPhoto) }
+                  : coverImage
+              }
+              style={styles.coverImage}
+              contentFit="cover"
+              transition={200}
+            />
+          </Pressable>
           <Pressable style={styles.settingsButton}>
             <Text style={styles.settingsText}>⚙</Text>
           </Pressable>
@@ -132,12 +214,25 @@ export default function Profile() {
 
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Image source={avatarImage} style={styles.avatarImage} />
+            <Pressable
+              onPress={handleProfilePhotoPress}
+              style={{ width: "100%", height: "100%" }}
+            >
+              <Image
+                source={
+                  profile?.profilePhoto
+                    ? { uri: getSecureImageUrl(profile.profilePhoto) }
+                    : avatarImage
+                }
+                style={styles.avatarImage}
+                contentFit="cover"
+                transition={200}
+              />
+            </Pressable>
           </View>
 
           <View style={styles.identity}>
             <View style={styles.nameRow}>
-              {/* DİNAMİK VERİ: İSİM */}
               <Text style={styles.name}>{profile.name}</Text>
               <Pressable
                 style={styles.editButton}
@@ -147,11 +242,9 @@ export default function Profile() {
               </Pressable>
             </View>
 
-            {/* DİNAMİK VERİ: KULLANICI ADI */}
             <Text style={styles.username}>{profile.username}</Text>
 
             <View style={styles.followRow}>
-              {/* DİNAMİK VERİ: TAKİPÇİ VE TAKİP EDİLEN */}
               <Text style={styles.followNumber}>{profile.followerCount}</Text>
               <Text style={styles.followLabel}> Takipçi</Text>
               <Text style={styles.followNumber}> {profile.followingCount}</Text>
@@ -167,17 +260,22 @@ export default function Profile() {
           </View>
 
           <View style={styles.garageRow}>
-            {/* EĞER GARAJ BOŞSA BİLGİ VERELİM, DEĞİLSE ARAÇLARI LİSTELEYELİM */}
             {profile.garage && profile.garage.length > 0 ? (
               profile.garage.map((vehicle, index) => (
                 <View style={styles.garageItem} key={vehicle.id}>
-                  {/* Resimleri şimdilik sırayla sabit veriyoruz */}
                   <Image
-                    source={index % 2 === 0 ? garageOne : garageTwo}
+                    source={
+                      vehicle.imageUrl
+                        ? { uri: getSecureImageUrl(vehicle.imageUrl) }
+                        : (index % 2 === 0 ? garageOne : garageTwo) 
+                    }
                     style={styles.garageImage}
+                    contentFit="cover"
+                    transition={200}
                   />
                   <Text style={styles.imageLabel}>
-                    {vehicle.brand} {vehicle.model}
+                    {vehicle.brand} {vehicle.model} {vehicle.year}
+                    {vehicle.licensePlate ? ` - ${vehicle.licensePlate}` : ""}
                   </Text>
                 </View>
               ))
@@ -195,13 +293,12 @@ export default function Profile() {
             <Text style={styles.chevron}>›</Text>
           </View>
 
-          {/* DİNAMİK VERİ: GÖNDERİLER */}
           {profile.posts && profile.posts.length > 0 ? (
             profile.posts.map((post) => (
               <PostRow
                 key={post.id}
-                image={postImage} // Sabit resim
-                title={post.content} // Backend'den gelen içerik
+                image={postImage}
+                title={post.content}
                 time={post.time}
                 likes={post.likesCount.toString()}
                 comments={post.commentsCount.toString()}
@@ -222,7 +319,6 @@ export default function Profile() {
             <Text style={styles.chevron}>›</Text>
           </View>
 
-          {/* Rotaları şimdilik tasarım bozulmasın diye sabit bırakıyorum */}
           {profile.routes && profile.routes.length > 0 ? (
             profile.routes.map((route) => (
               <RouteRow
@@ -295,7 +391,9 @@ function RouteRow({
     <View style={styles.routeRow}>
       <View style={styles.routeTextBox}>
         <Text style={styles.rowTitle}>{title}</Text>
-        <Text style={styles.metricText}>{duration} saat · {distance} km</Text>
+        <Text style={styles.metricText}>
+          {duration} saat · {distance} km
+        </Text>
         <Text style={styles.metricText}>{}</Text>
         <Text style={styles.rowDetail}>{detail}</Text>
       </View>
