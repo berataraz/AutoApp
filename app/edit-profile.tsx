@@ -36,7 +36,7 @@ export default function EditProfile() {
     commentsCount: number;
     time: string;
   }
-  
+
   interface Route {
     id: number;
     title: string;
@@ -44,7 +44,7 @@ export default function EditProfile() {
     duration: number;
     distance: number;
   }
-  
+
   interface UserProfile {
     name: string;
     lastName: string;
@@ -59,60 +59,80 @@ export default function EditProfile() {
     posts: Post[];
     routes: Route[];
   }
-  const[profile,setProfile]=useState<UserProfile |null>(null);
-  const[UpdateProfile,setUpdateProfile]=useState<UpdateProfileRequest |null>(null);
-  const[loading,setLoading]=useState(true);
-  
-  const updateProfile = async () => {
-    try{
-      const token = await AsyncStorage.getItem("token");
-      const response = await api().get("/profile/updateProfile", {
-        headers: { Authorization: `Bearer ${token}`,
-          email:email,
-          name:name,
-          lastName:lastName,
-          phoneNumber:phoneNumber,
-        },
-      });
-      setUpdateProfile(response.data);
-    } catch (error){ Alert.alert("Profil Güncellenirken Hata Oluştu")
-  } finally{setLoading(false)}
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [UpdateProfile, setUpdateProfile] =
+    useState<UpdateProfileRequest | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
 
-  }
+  const handleUpdate = async () => {
+    try {
+      setLoading(true);
+      const token = await AsyncStorage.getItem("token");
+
+      const response = await api().post(
+        "/profile/updateProfile",
+        {
+          name: name,
+          lastName: lastName,
+          phoneNumber: phoneNumber,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      Alert.alert("Başarılı", "Profil güncellendi.");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Hata", "Profil güncellenirken bir sorun oluştu.");
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
-
         const response = await api().get("/profile/me", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
-console.log(profile)
-        setProfile(response.data);
+
+        // Veriyi al
+        const data = response.data;
+        setProfile(data);
+
+        // State'leri güncelle ki kutucuklar dolsun!
+        setName(data.name || "");
+        setLastName(data.lastName || "");
+        setEmail(data.email || "");
+        setPhoneNumber(data.phoneNumber || "");
       } catch (error) {
-        console.log("Profil çekme hatası:", error);
         Alert.alert("Hata", "Profil bilgileri alınamadı.");
       } finally {
         setLoading(false);
       }
     };
-
     fetchProfileData();
   }, []);
- 
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.content}>
         <Text style={styles.title}>Profil Düzenle</Text>
         <Text style={styles.sectionTitle}>Kişisel Bilgiler</Text>
 
-        <Field label="Ad" value={profile?.name}/>
-        <Field label="Soyad" value={profile?.lastName}/>
-        <Field label="E posta" value={profile?.email}/>
-        <Field label="Telefon" value={profile?.phoneNumber}/>
-
+        <Field label="Ad" value={name} onChangeText={setName} />
+        <Field label="Soyad" value={lastName} onChangeText={setLastName} />
+        <Field label="E-posta" value={email} onChangeText={setEmail} />
+        <Field
+          label="Telefon"
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+        />
         <Pressable
           style={styles.wideButton}
           onPress={() => {
@@ -122,8 +142,14 @@ console.log(profile)
           <Text style={styles.buttonText}>Araç Ekle</Text>
         </Pressable>
 
-        <Pressable style={styles.saveButton}>
-          <Text style={styles.buttonText}onPress={updateProfile}>Kaydet</Text>
+        <Pressable
+          style={styles.saveButton}
+          onPress={handleUpdate}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Bekleyin..." : "Kaydet"}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -133,17 +159,20 @@ console.log(profile)
 function Field({
   label,
   value,
+  onChangeText,
   placeholder,
 }: {
   label: string;
   value?: string;
+  onChangeText: (text: string) => void; 
   placeholder?: string;
 }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        defaultValue={value}
+        value={value}
+        onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor="#6f7075"
         style={styles.input}
