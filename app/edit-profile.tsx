@@ -1,5 +1,9 @@
+import api from "@/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -9,16 +13,105 @@ import {
 } from "react-native";
 
 export default function EditProfile() {
+  interface Vehicle {
+    id: number;
+    brand: string;
+    model: string;
+    year: number;
+    licensePlate?: string;
+    imageUrl?: string;
+  }
+
+  interface UpdateProfileRequest {
+    name: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+  }
+
+  interface Post {
+    id: number;
+    content: string;
+    likesCount: number;
+    commentsCount: number;
+    time: string;
+  }
+  
+  interface Route {
+    id: number;
+    title: string;
+    detail: string;
+    duration: number;
+    distance: number;
+  }
+  
+  interface UserProfile {
+    name: string;
+    lastName: string;
+    username: string;
+    phoneNumber: string;
+    email: string;
+    profilePhoto: string | null;
+    coverPhoto: string | null;
+    followerCount: number;
+    followingCount: number;
+    garage: Vehicle[];
+    posts: Post[];
+    routes: Route[];
+  }
+  const[profile,setProfile]=useState<UserProfile |null>(null);
+  const[UpdateProfile,setUpdateProfile]=useState<UpdateProfileRequest |null>(null);
+  const[loading,setLoading]=useState(true);
+  
+  const updateProfile = async () => {
+    try{
+      const token = await AsyncStorage.getItem("token");
+      const response = await api().get("/profile/updateProfile", {
+        headers: { Authorization: `Bearer ${token}`,
+          email:email,
+          name:name,
+          lastName:lastName,
+          phoneNumber:phoneNumber,
+        },
+      });
+      setUpdateProfile(response.data);
+    } catch (error){ Alert.alert("Profil Güncellenirken Hata Oluştu")
+  } finally{setLoading(false)}
+
+  }
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+
+        const response = await api().get("/profile/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+console.log(profile)
+        setProfile(response.data);
+      } catch (error) {
+        console.log("Profil çekme hatası:", error);
+        Alert.alert("Hata", "Profil bilgileri alınamadı.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
+ 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.content}>
         <Text style={styles.title}>Profil Düzenle</Text>
         <Text style={styles.sectionTitle}>Kişisel Bilgiler</Text>
 
-        <Field label="Ad" value="John" />
-        <Field label="Soyad" value="Doe" />
-        <Field label="E posta" placeholder="Eposta adresini yazınız" />
-        <Field label="Telefon" placeholder="telefon numarası giriniz" />
+        <Field label="Ad" value={profile?.name}/>
+        <Field label="Soyad" value={profile?.lastName}/>
+        <Field label="E posta" value={profile?.email}/>
+        <Field label="Telefon" value={profile?.phoneNumber}/>
 
         <Pressable
           style={styles.wideButton}
@@ -30,7 +123,7 @@ export default function EditProfile() {
         </Pressable>
 
         <Pressable style={styles.saveButton}>
-          <Text style={styles.buttonText}>Kaydet</Text>
+          <Text style={styles.buttonText}onPress={updateProfile}>Kaydet</Text>
         </Pressable>
       </View>
     </SafeAreaView>
