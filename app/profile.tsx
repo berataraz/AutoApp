@@ -1,6 +1,13 @@
+import { uploadImageToServer } from "@/services/userProfileService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import type { ImageSourcePropType } from "react-native";
 import {
-  Image,
+  ActivityIndicator,
+  Alert,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -8,7 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
-import type { ImageSourcePropType } from "react-native";
+import api from "../api";
 
 const coverImage = require("../assets/images/21.jpg");
 const avatarImage = require("../assets/images/3.jpg");
@@ -18,9 +25,169 @@ const postImage = require("../assets/images/33.jpg");
 const routeMapOne = require("../assets/images/9.png");
 const routeMapTwo = require("../assets/images/10.png");
 
+interface Vehicle {
+  id: number;
+  brand: string;
+  model: string;
+  year: number;
+  licensePlate?: string;
+  imageUrl?: string;
+}
+
+interface Post {
+  id: number;
+  content: string;
+  likesCount: number;
+  commentsCount: number;
+  time: string;
+}
+
+interface Route {
+  id: number;
+  title: string;
+  detail: string;
+  duration: number;
+  distance: number;
+}
+
+interface UserProfile {
+  name: string;
+  username: string;
+  profilePhoto: string | null;
+  coverPhoto: string | null;
+  followerCount: number;
+  followingCount: number;
+  garage: Vehicle[];
+  posts: Post[];
+  routes: Route[];
+}
+
+// HTTP -> HTTPS dönüşümü için yardımcı fonksiyon
+const getSecureImageUrl = (url: string | null | undefined) => {
+  if (!url) return null;
+  return url.replace("http://", "https://");
+};
+
 export default function Profile() {
   const router = useRouter();
 
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // --- AKILLI VE TEK (DRY) FOTOĞRAF SEÇİCİ FONKSİYON ---
+  const handleImageSelection = async (isCover: boolean, fromCamera: boolean) => {
+    // İzinleri kontrol et
+    const permissionResult = fromCamera
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (permissionResult.granted === false) {
+      Alert.alert("Hata", "Gerekli izinler verilmedi.");
+      return;
+    }
+
+    // Kamera/Galeri ayarlarını belirle (Kapak ise 16:9, Profil ise 1:1)
+    const options: ImagePicker.ImagePickerOptions = {
+      allowsEditing: true,
+      aspect: isCover ? [16, 9] : [1, 1],
+      quality: 0.5,
+    };
+
+    // İsteğe göre Kamera veya Galeriyi aç
+    const result = fromCamera
+      ? await ImagePicker.launchCameraAsync(options)
+      : await ImagePicker.launchImageLibraryAsync(options);
+
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+
+      // Ekranı anında güncelle (Hızlı UX)
+      setProfile((prev) => {
+        if (!prev) return prev;
+        return isCover ? { ...prev, coverPhoto: uri } : { ...prev, profilePhoto: uri };
+      });
+
+      // Arka planda sunucuya yükle
+      const endpoint = isCover ? "/profile/uploadCoverPhoto" : "/profile/uploadProfilePhoto";
+      const photoType = isCover ? "cover" : "profile";
+
+      uploadImageToServer(uri, endpoint, photoType);
+    }
+  };
+
+  // --- PROFİL VE KAPAK MENÜLERİ ---
+  const handleProfilePhotoPress = () => {
+    Alert.alert("Profil Fotoğrafı Seç", "Bir seçenek belirleyin.", [
+      { text: "Fotoğraf Çek", onPress: () => handleImageSelection(false, true) },
+      { text: "Galeriden Seç", onPress: () => handleImageSelection(false, false) },
+      { text: "İptal", style: "cancel" },
+    ]);
+  };
+
+  const handleCoverPhotoPress = () => {
+    Alert.alert("Kapak Fotoğrafı Seç", "Bir seçenek belirleyin.", [
+      { text: "Fotoğraf Çek", onPress: () => handleImageSelection(true, true) },
+      { text: "Galeriden Seç", onPress: () => handleImageSelection(true, false) },
+      { text: "İptal", style: "cancel" },
+    ]);
+  };
+
+  // --- VERİ ÇEKME ---
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const token = await AsyncStorage.getItem("token");
+
+        const response = await api().get("/profile/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        setProfile(response.data);
+      } catch (error) {
+        console.log("Profil çekme hatası:", error);
+        Alert.alert("Hata", "Profil bilgileri alınamadı.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
+
+  // --- YÜKLENİYOR VE BOŞ DURUM EKRANLARI ---
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#17181a",
+        }}
+      >
+        <ActivityIndicator size="large" color="#a8732b" />
+      </View>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#17181a",
+        }}
+      >
+        <Text style={{ color: "white" }}>Veri bulunamadı.</Text>
+      </View>
+    );
+  }
+
+  // --- ARAYÜZ (UI) ---
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -28,7 +195,18 @@ export default function Profile() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.coverWrap}>
-          <Image source={coverImage} style={styles.coverImage} />
+          <Pressable style={{ flex: 1 }} onPress={handleCoverPhotoPress}>
+            <Image
+              source={
+                profile?.coverPhoto
+                  ? { uri: getSecureImageUrl(profile.coverPhoto) }
+                  : coverImage
+              }
+              style={styles.coverImage}
+              contentFit="cover"
+              transition={200}
+            />
+          </Pressable>
           <Pressable style={styles.settingsButton}>
             <Text style={styles.settingsText}>⚙</Text>
           </Pressable>
@@ -36,12 +214,26 @@ export default function Profile() {
 
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Image source={avatarImage} style={styles.avatarImage} />
+            <Pressable
+              onPress={handleProfilePhotoPress}
+              style={{ width: "100%", height: "100%" }}
+            >
+              <Image
+                source={
+                  profile?.profilePhoto
+                    ? { uri: getSecureImageUrl(profile.profilePhoto) }
+                    : avatarImage
+                }
+                style={styles.avatarImage}
+                contentFit="cover"
+                transition={200}
+              />
+            </Pressable>
           </View>
 
           <View style={styles.identity}>
             <View style={styles.nameRow}>
-              <Text style={styles.name}>John Doe</Text>
+              <Text style={styles.name}>{profile.name}</Text>
               <Pressable
                 style={styles.editButton}
                 onPress={() => router.push("/edit-profile")}
@@ -50,12 +242,12 @@ export default function Profile() {
               </Pressable>
             </View>
 
-            <Text style={styles.username}>@johndoe</Text>
+            <Text style={styles.username}>{profile.username}</Text>
 
             <View style={styles.followRow}>
-              <Text style={styles.followNumber}>1</Text>
+              <Text style={styles.followNumber}>{profile.followerCount}</Text>
               <Text style={styles.followLabel}> Takipçi</Text>
-              <Text style={styles.followNumber}>   1</Text>
+              <Text style={styles.followNumber}> {profile.followingCount}</Text>
               <Text style={styles.followLabel}> Takip Edilen</Text>
             </View>
           </View>
@@ -68,15 +260,30 @@ export default function Profile() {
           </View>
 
           <View style={styles.garageRow}>
-            <View style={styles.garageItem}>
-              <Image source={garageOne} style={styles.garageImage} />
-              <Text style={styles.imageLabel}>BMW X1</Text>
-            </View>
-
-            <View style={styles.garageItem}>
-              <Image source={garageTwo} style={styles.garageImage} />
-              <Text style={styles.imageLabel}>BMW X1</Text>
-            </View>
+            {profile.garage && profile.garage.length > 0 ? (
+              profile.garage.map((vehicle, index) => (
+                <View style={styles.garageItem} key={vehicle.id}>
+                  <Image
+                    source={
+                      vehicle.imageUrl
+                        ? { uri: getSecureImageUrl(vehicle.imageUrl) }
+                        : (index % 2 === 0 ? garageOne : garageTwo) 
+                    }
+                    style={styles.garageImage}
+                    contentFit="cover"
+                    transition={200}
+                  />
+                  <Text style={styles.imageLabel}>
+                    {vehicle.brand} {vehicle.model} {vehicle.year}
+                    {vehicle.licensePlate ? ` - ${vehicle.licensePlate}` : ""}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <Text style={{ color: "#a9a9ae", marginLeft: 10 }}>
+                Garajınızda henüz araç yok.
+              </Text>
+            )}
           </View>
         </View>
 
@@ -86,20 +293,24 @@ export default function Profile() {
             <Text style={styles.chevron}>›</Text>
           </View>
 
-          <PostRow
-            image={postImage}
-            title="Fethiye Sürüşü'nden"
-            time="2 saat önce"
-            likes="29"
-            comments="12"
-          />
-          <PostRow
-            image={garageOne}
-            title="Gün batımı sürüşü"
-            time="3 gün önce"
-            likes="48"
-            comments="4"
-          />
+          {profile.posts && profile.posts.length > 0 ? (
+            profile.posts.map((post) => (
+              <PostRow
+                key={post.id}
+                image={postImage}
+                title={post.content}
+                time={post.time}
+                likes={post.likesCount.toString()}
+                comments={post.commentsCount.toString()}
+              />
+            ))
+          ) : (
+            <Text
+              style={{ color: "#a9a9ae", marginLeft: 10, marginBottom: 10 }}
+            >
+              Henüz bir gönderi paylaşmadınız.
+            </Text>
+          )}
         </View>
 
         <View style={styles.card}>
@@ -108,17 +319,32 @@ export default function Profile() {
             <Text style={styles.chevron}>›</Text>
           </View>
 
-          <RouteRow
-            title="İstanbul'dan Bodrum'a Sürüş"
-            detail="702 km   8 saat sürüş"
-            image={routeMapOne}
-          />
-          <RouteRow
-            title="Ayazağa'dan SAW'A Sürüş"
-            detail="36 km   30 dakika sürüş"
-            image={routeMapTwo}
-          />
+          {profile.routes && profile.routes.length > 0 ? (
+            profile.routes.map((route) => (
+              <RouteRow
+                key={route.id}
+                title={route.title}
+                detail={route.detail}
+                duration={route.duration}
+                distance={route.distance}
+              />
+            ))
+          ) : (
+            <Text
+              style={{ color: "#a9a9ae", marginLeft: 10, marginBottom: 10 }}
+            >
+              Henüz bir rota oluşturmadınız.
+            </Text>
+          )}
         </View>
+        <Pressable
+          style={styles.featureCard}
+          onPress={() =>
+            AsyncStorage.removeItem("token").then(() => router.push("/"))
+          }
+        >
+          <Text style={styles.featureTitle}>Çıkış Yap</Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
@@ -153,17 +379,22 @@ function PostRow({
 function RouteRow({
   title,
   detail,
-  image,
+  duration,
+  distance,
 }: {
   title: string;
   detail: string;
-  image: ImageSourcePropType;
+  duration: number;
+  distance: number;
 }) {
   return (
     <View style={styles.routeRow}>
-      <Image source={image} style={styles.routeImage} />
       <View style={styles.routeTextBox}>
         <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.metricText}>
+          {duration} saat · {distance} km
+        </Text>
+        <Text style={styles.metricText}>{}</Text>
         <Text style={styles.rowDetail}>{detail}</Text>
       </View>
     </View>
@@ -356,5 +587,18 @@ const styles = StyleSheet.create({
   routeTextBox: {
     flex: 1,
     marginLeft: 12,
+  },
+  featureCard: {
+    backgroundColor: "#ff0000",
+    borderRadius: 8,
+    marginHorizontal: 150,
+    marginVertical: 12,
+    padding: 14,
+  },
+  featureTitle: {
+    color: "#f2f2f2",
+    fontSize: 14,
+    fontWeight: "800",
+    alignSelf: "center",
   },
 });
