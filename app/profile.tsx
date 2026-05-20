@@ -37,6 +37,7 @@ interface Vehicle {
 interface Post {
   id: number;
   content: string;
+  postPhoto: string | null;
   likesCount: number;
   commentsCount: number;
   time: string;
@@ -75,7 +76,10 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
 
   // --- AKILLI VE TEK (DRY) FOTOĞRAF SEÇİCİ FONKSİYON ---
-  const handleImageSelection = async (isCover: boolean, fromCamera: boolean) => {
+  const handleImageSelection = async (
+    isCover: boolean,
+    fromCamera: boolean,
+  ) => {
     // İzinleri kontrol et
     const permissionResult = fromCamera
       ? await ImagePicker.requestCameraPermissionsAsync()
@@ -104,11 +108,15 @@ export default function Profile() {
       // Ekranı anında güncelle (Hızlı UX)
       setProfile((prev) => {
         if (!prev) return prev;
-        return isCover ? { ...prev, coverPhoto: uri } : { ...prev, profilePhoto: uri };
+        return isCover
+          ? { ...prev, coverPhoto: uri }
+          : { ...prev, profilePhoto: uri };
       });
 
       // Arka planda sunucuya yükle
-      const endpoint = isCover ? "/profile/uploadCoverPhoto" : "/profile/uploadProfilePhoto";
+      const endpoint = isCover
+        ? "/profile/uploadCoverPhoto"
+        : "/profile/uploadProfilePhoto";
       const photoType = isCover ? "cover" : "profile";
 
       uploadImageToServer(uri, endpoint, photoType);
@@ -118,8 +126,14 @@ export default function Profile() {
   // --- PROFİL VE KAPAK MENÜLERİ ---
   const handleProfilePhotoPress = () => {
     Alert.alert("Profil Fotoğrafı Seç", "Bir seçenek belirleyin.", [
-      { text: "Fotoğraf Çek", onPress: () => handleImageSelection(false, true) },
-      { text: "Galeriden Seç", onPress: () => handleImageSelection(false, false) },
+      {
+        text: "Fotoğraf Çek",
+        onPress: () => handleImageSelection(false, true),
+      },
+      {
+        text: "Galeriden Seç",
+        onPress: () => handleImageSelection(false, false),
+      },
       { text: "İptal", style: "cancel" },
     ]);
   };
@@ -127,7 +141,10 @@ export default function Profile() {
   const handleCoverPhotoPress = () => {
     Alert.alert("Kapak Fotoğrafı Seç", "Bir seçenek belirleyin.", [
       { text: "Fotoğraf Çek", onPress: () => handleImageSelection(true, true) },
-      { text: "Galeriden Seç", onPress: () => handleImageSelection(true, false) },
+      {
+        text: "Galeriden Seç",
+        onPress: () => handleImageSelection(true, false),
+      },
       { text: "İptal", style: "cancel" },
     ]);
   };
@@ -267,7 +284,9 @@ export default function Profile() {
                     source={
                       vehicle.imageUrl
                         ? { uri: getSecureImageUrl(vehicle.imageUrl) }
-                        : (index % 2 === 0 ? garageOne : garageTwo) 
+                        : index % 2 === 0
+                          ? garageOne
+                          : garageTwo
                     }
                     style={styles.garageImage}
                     contentFit="cover"
@@ -297,7 +316,11 @@ export default function Profile() {
             profile.posts.map((post) => (
               <PostRow
                 key={post.id}
-                image={postImage}
+                image={
+                  post.postPhoto // Backend'den DTO ile "postPhoto" adıyla gelmeli
+                    ? { uri: getSecureImageUrl(post.postPhoto) }
+                    : postImage
+                }
                 title={post.content}
                 time={post.time}
                 likes={post.likesCount.toString()}

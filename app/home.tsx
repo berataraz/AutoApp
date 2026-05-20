@@ -51,7 +51,15 @@ export default function Home() {
             <Text style={styles.featureText}>Araç tutkunlarını keşfet</Text>
             <Image source={carImage} style={styles.featureImage} />
           </Pressable>
-
+          <Pressable
+            style={styles.featureCard}
+            onPress={() => router.push("/feed")}
+          >
+            <Text style={styles.featureTitle}>Gönderiler</Text>
+            <Text style={styles.featureText}>
+              Dostlarınızın gönderilerini keşfet
+            </Text>
+          </Pressable>
           <Pressable
             style={styles.featureCard}
             onPress={() => router.push("/clubs")}
