@@ -1,3 +1,4 @@
+import { DatePickerField } from "@/components/forms/DatePickerField";
 import { addVehicle } from "@/services/vehicleService";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
@@ -22,6 +23,7 @@ export default function AddVehicle() {
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
+  const [inspectionAppointmentDate, setInspectionAppointmentDate] = useState("");
   const [imageUri, setImageUri] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -99,6 +101,7 @@ export default function AddVehicle() {
         brand,
         model,
         year,
+        inspectionAppointmentDate,
         imageUri,
       });
 
@@ -210,6 +213,13 @@ export default function AddVehicle() {
             maxLength={4}
             value={year}
             onChangeText={setYear}
+          />
+
+          <DatePickerField
+            label="Muayene Randevu Tarihi"
+            value={inspectionAppointmentDate}
+            onChange={setInspectionAppointmentDate}
+            optional
           />
         </View>
 

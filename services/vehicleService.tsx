@@ -11,6 +11,7 @@ export interface AddVehicleRequest {
   brand: string;
   model: string;
   year: string | number;
+  inspectionAppointmentDate?: string;
   imageUri?: string | null;
 }
 
@@ -19,6 +20,7 @@ export interface UpdateVehicleRequest {
   model: string;
   year: number;
   licensePlate?: string;
+  inspectionAppointmentDate?: string;
   imageUri?: string | null;
 }
 
@@ -61,6 +63,11 @@ const submitVehicleForm = async <T,>(
     throw new Error(`${response.status}: ${errorText}`);
   }
 
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return (await response.text()) as T;
+  }
+
   return (await response.json()) as T;
 };
 
@@ -82,9 +89,15 @@ export const addVehicle = async (payload: AddVehicleRequest) => {
   formData.append("brand", payload.brand);
   formData.append("model", payload.model);
   formData.append("year", String(payload.year));
+  if (payload.inspectionAppointmentDate?.trim()) {
+    formData.append(
+      "inspectionAppointmentDate",
+      payload.inspectionAppointmentDate.trim(),
+    );
+  }
   appendImage(formData, "file", payload.imageUri, "vehicle.jpg");
 
-  return submitVehicleForm<Vehicle>("/vehicle/add", "POST", formData);
+  return submitVehicleForm<string>("/vehicle/add", "POST", formData);
 };
 
 export const updateVehicle = async (
@@ -97,6 +110,7 @@ export const updateVehicle = async (
   formData.append("model", payload.model);
   formData.append("year", String(payload.year));
   formData.append("licensePlate", payload.licensePlate ?? "");
+  formData.append("inspectionAppointmentDate", payload.inspectionAppointmentDate ?? "");
   appendImage(formData, "image", payload.imageUri, "vehicle_image.jpg");
 
   return submitVehicleForm<Vehicle>(`/vehicle/${vehicleId}`, "PUT", formData);

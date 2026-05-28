@@ -1,3 +1,4 @@
+import { DatePickerField } from "@/components/forms/DatePickerField";
 import {
   ActivityIndicator,
   Modal,
@@ -14,12 +15,14 @@ interface VehicleEditModalProps {
   model: string;
   year: string;
   licensePlate: string;
+  inspectionAppointmentDate: string;
   imageUri: string | null;
   isUpdating: boolean;
   onBrandChange: (value: string) => void;
   onModelChange: (value: string) => void;
   onYearChange: (value: string) => void;
   onLicensePlateChange: (value: string) => void;
+  onInspectionAppointmentDateChange: (value: string) => void;
   onPickImage: () => void;
   onSave: () => void;
   onClose: () => void;
@@ -31,12 +34,14 @@ export function VehicleEditModal({
   model,
   year,
   licensePlate,
+  inspectionAppointmentDate,
   imageUri,
   isUpdating,
   onBrandChange,
   onModelChange,
   onYearChange,
   onLicensePlateChange,
+  onInspectionAppointmentDateChange,
   onPickImage,
   onSave,
   onClose,
@@ -83,6 +88,13 @@ export function VehicleEditModal({
             placeholderTextColor="#999"
             value={licensePlate}
             onChangeText={onLicensePlateChange}
+          />
+          <DatePickerField
+            label="Muayene Randevu Tarihi"
+            value={inspectionAppointmentDate}
+            onChange={onInspectionAppointmentDateChange}
+            optional
+            iosDisplay="compact"
           />
 
           <View style={styles.modalActions}>

@@ -1,7 +1,7 @@
 import { getActiveVehicle } from "@/services/vehicleService";
 import type { Vehicle } from "@/types/domain";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Image,
   Pressable,
@@ -16,23 +16,43 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const carImage = require("../assets/images/5.jpg");
 const eventImage = require("../assets/images/33.jpg");
 
+const formatTryAmount = (amount?: number | null) => {
+  const numericAmount = Number(amount ?? 0);
+  const safeAmount = Number.isFinite(numericAmount) ? numericAmount : 0;
+
+  return `\u20ba${safeAmount.toLocaleString("tr-TR", {
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+const formatDisplayDate = (date?: string | null) => {
+  if (!date) return "-";
+
+  const [year, month, day] = date.slice(0, 10).split("-");
+  if (!year || !month || !day) return date;
+
+  return `${day}/${month}/${year}`;
+};
+
 export default function Home() {
   const router = useRouter();
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
 
-  useEffect(() => {
-    const fetchCarData = async () => {
-      try {
-        const vehicle = await getActiveVehicle();
-        console.log("Active Vehicle Data:", vehicle);
-        setActiveVehicle(vehicle);
-      } catch (error) {
-        console.log("Active Vehicle Data error:", error);
-      }
-    };
+  useFocusEffect(
+    useCallback(() => {
+      const fetchCarData = async () => {
+        try {
+          const vehicle = await getActiveVehicle();
+          console.log("Active Vehicle Data:", vehicle);
+          setActiveVehicle(vehicle);
+        } catch (error) {
+          console.log("Active Vehicle Data error:", error);
+        }
+      };
 
-    fetchCarData();
-  }, []);
+      fetchCarData();
+    }, []),
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -101,25 +121,49 @@ export default function Home() {
           <Image source={eventImage} style={styles.activityImage} />
         </Pressable>
 
-        <Pressable style={styles.vehicleCard}>
-          <View style={styles.vehicleIconBox}>
-            <Image
-              source={
-                activeVehicle?.imageUrl
-                  ? { uri: activeVehicle.imageUrl }
-                  : undefined
-              }
-              style={styles.activityVehicleImage}
-            />
+        <Pressable
+          style={styles.vehicleCard}
+          onPress={() => {
+            if (activeVehicle) router.push("/vehicle-detail");
+          }}
+        >
+          <View style={styles.vehicleImageFrame}>
+            {activeVehicle?.imageUrl ? (
+              <Image
+                source={{ uri: activeVehicle.imageUrl }}
+                style={styles.activityVehicleImage}
+              />
+            ) : (
+              <Text style={styles.vehicleImagePlaceholder}>AT</Text>
+            )}
           </View>
           <View style={styles.vehicleInfo}>
-            <Text style={styles.bodyText}>
-              {"Aktif Ara\u00e7: "}
-              {activeVehicle?.brand} {activeVehicle?.model}
-            </Text>
-            <Text style={styles.bodyText}>{"Bu Ay Harcama: \u20ba3.250"}</Text>
-            <Text style={styles.bodyText}>Muayene Randevu Tarihi:</Text>
-            <Text style={styles.bodyText}>24/03/2028</Text>
+            <View style={styles.vehicleHeaderRow}>
+              <View style={styles.vehicleTitleBlock}>
+                <Text style={styles.vehicleEyebrow}>{"Aktif Ara\u00e7"}</Text>
+                <Text style={styles.vehicleName} numberOfLines={1}>
+                  {activeVehicle
+                    ? `${activeVehicle.brand} ${activeVehicle.model}`
+                    : "-"}
+                </Text>
+              </View>
+              <Text style={styles.vehicleEditText}>{"D\u00fczenle"}</Text>
+            </View>
+            <View style={styles.vehicleStatsRow}>
+              <View style={styles.vehicleStat}>
+                <Text style={styles.vehicleStatLabel}>{"Bu Ay"}</Text>
+                <Text style={styles.vehicleStatValue}>
+                  {formatTryAmount(activeVehicle?.monthlyExpenseTotal)}
+                </Text>
+              </View>
+              <View style={styles.vehicleDivider} />
+              <View style={styles.vehicleStat}>
+                <Text style={styles.vehicleStatLabel}>{"Muayene"}</Text>
+                <Text style={styles.vehicleStatValue}>
+                  {formatDisplayDate(activeVehicle?.inspectionAppointmentDate)}
+                </Text>
+              </View>
+            </View>
           </View>
         </Pressable>
 
@@ -156,9 +200,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   activityVehicleImage: {
-    borderRadius: 8,
-    height: 90,
-    width: 90,
+    height: "100%",
+    width: "100%",
   },
   bellText: {
     color: "#202124",
@@ -281,21 +324,82 @@ const styles = StyleSheet.create({
   vehicleCard: {
     alignItems: "center",
     backgroundColor: "#111213",
-    borderRadius: 15,
+    borderColor: "#24262c",
+    borderRadius: 12,
+    borderWidth: 1,
     flexDirection: "row",
-    height: 100,
+    gap: 14,
+    minHeight: 126,
     marginHorizontal: 24,
     marginTop: 20,
-    paddingHorizontal: 12,
+    padding: 14,
   },
-  vehicleIconBox: {
+  vehicleDivider: {
+    backgroundColor: "#34363d",
+    height: 34,
+    width: 1,
+  },
+  vehicleEditText: {
+    color: "#c47a2d",
+    fontSize: 12,
+    fontWeight: "800",
+    paddingLeft: 8,
+  },
+  vehicleEyebrow: {
+    color: "#c47a2d",
+    fontSize: 12,
+    fontWeight: "800",
+    marginBottom: 2,
+  },
+  vehicleHeaderRow: {
+    alignItems: "flex-start",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  vehicleImageFrame: {
     alignItems: "center",
+    backgroundColor: "#24262c",
+    borderRadius: 10,
+    height: 88,
     justifyContent: "center",
-    width: 58,
+    overflow: "hidden",
+    width: 88,
+  },
+  vehicleImagePlaceholder: {
+    color: "#c47a2d",
+    fontSize: 18,
+    fontWeight: "800",
   },
   vehicleInfo: {
     flex: 1,
-    marginLeft: 50,
-    paddingLeft: 10,
+    gap: 14,
+  },
+  vehicleName: {
+    color: "#f0f0f1",
+    fontSize: 16,
+    fontWeight: "800",
+    lineHeight: 20,
+  },
+  vehicleStat: {
+    flex: 1,
+    gap: 3,
+  },
+  vehicleStatLabel: {
+    color: "#8f929b",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  vehicleStatValue: {
+    color: "#d7d8dc",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  vehicleStatsRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+  },
+  vehicleTitleBlock: {
+    flex: 1,
   },
 });

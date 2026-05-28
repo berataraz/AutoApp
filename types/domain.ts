@@ -5,6 +5,8 @@ export interface Vehicle {
   year: number;
   licensePlate?: string;
   imageUrl?: string;
+  monthlyExpenseTotal?: number;
+  inspectionAppointmentDate?: string | null;
 }
 
 export interface ProfilePost {

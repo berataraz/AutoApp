@@ -41,6 +41,8 @@ export default function Profile() {
   const [editModel, setEditModel] = useState("");
   const [editYear, setEditYear] = useState("");
   const [editLicensePlate, setEditLicensePlate] = useState("");
+  const [editInspectionAppointmentDate, setEditInspectionAppointmentDate] =
+    useState("");
   const [editImageUri, setEditImageUri] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -102,31 +104,39 @@ export default function Profile() {
   };
 
   const handleProfilePhotoPress = () => {
-    Alert.alert("Profil Foto\u011fraf\u0131 Se\u00e7", "Bir se\u00e7enek belirleyin.", [
-      {
-        text: "Foto\u011fraf \u00c7ek",
-        onPress: () => handleImageSelection(false, true),
-      },
-      {
-        text: "Galeriden Se\u00e7",
-        onPress: () => handleImageSelection(false, false),
-      },
-      { text: "\u0130ptal", style: "cancel" },
-    ]);
+    Alert.alert(
+      "Profil Foto\u011fraf\u0131 Se\u00e7",
+      "Bir se\u00e7enek belirleyin.",
+      [
+        {
+          text: "Foto\u011fraf \u00c7ek",
+          onPress: () => handleImageSelection(false, true),
+        },
+        {
+          text: "Galeriden Se\u00e7",
+          onPress: () => handleImageSelection(false, false),
+        },
+        { text: "\u0130ptal", style: "cancel" },
+      ],
+    );
   };
 
   const handleCoverPhotoPress = () => {
-    Alert.alert("Kapak Foto\u011fraf\u0131 Se\u00e7", "Bir se\u00e7enek belirleyin.", [
-      {
-        text: "Foto\u011fraf \u00c7ek",
-        onPress: () => handleImageSelection(true, true),
-      },
-      {
-        text: "Galeriden Se\u00e7",
-        onPress: () => handleImageSelection(true, false),
-      },
-      { text: "\u0130ptal", style: "cancel" },
-    ]);
+    Alert.alert(
+      "Kapak Foto\u011fraf\u0131 Se\u00e7",
+      "Bir se\u00e7enek belirleyin.",
+      [
+        {
+          text: "Foto\u011fraf \u00c7ek",
+          onPress: () => handleImageSelection(true, true),
+        },
+        {
+          text: "Galeriden Se\u00e7",
+          onPress: () => handleImageSelection(true, false),
+        },
+        { text: "\u0130ptal", style: "cancel" },
+      ],
+    );
   };
 
   const openEditVehicleModal = (vehicle: Vehicle) => {
@@ -135,6 +145,7 @@ export default function Profile() {
     setEditModel(vehicle.model);
     setEditYear(vehicle.year.toString());
     setEditLicensePlate(vehicle.licensePlate || "");
+    setEditInspectionAppointmentDate(vehicle.inspectionAppointmentDate || "");
     setEditImageUri(null);
     setEditModalVisible(true);
   };
@@ -156,7 +167,10 @@ export default function Profile() {
 
     const parsedYear = parseInt(editYear, 10);
     if (!editBrand.trim() || !editModel.trim() || Number.isNaN(parsedYear)) {
-      Alert.alert("Uyar\u0131", "L\u00fctfen marka, model ve y\u0131l alanlar\u0131n\u0131 doldurun.");
+      Alert.alert(
+        "Uyar\u0131",
+        "L\u00fctfen marka, model ve y\u0131l alanlar\u0131n\u0131 doldurun.",
+      );
       return;
     }
 
@@ -167,6 +181,7 @@ export default function Profile() {
         model: editModel.trim(),
         year: parsedYear,
         licensePlate: editLicensePlate.trim(),
+        inspectionAppointmentDate: editInspectionAppointmentDate.trim(),
         imageUri: editImageUri,
       });
 
@@ -178,11 +193,17 @@ export default function Profile() {
         return { ...prev, garage: updatedGarage };
       });
 
-      Alert.alert("Ba\u015far\u0131l\u0131", "Ara\u00e7 bilgileri g\u00fcncellendi!");
+      Alert.alert(
+        "Ba\u015far\u0131l\u0131",
+        "Ara\u00e7 bilgileri g\u00fcncellendi!",
+      );
       setEditModalVisible(false);
     } catch (error) {
       console.error("Vehicle update error:", error);
-      Alert.alert("Hata", "Ara\u00e7 g\u00fcncellenirken bir sorun olu\u015ftu.");
+      Alert.alert(
+        "Hata",
+        "Ara\u00e7 g\u00fcncellenirken bir sorun olu\u015ftu.",
+      );
     } finally {
       setIsUpdating(false);
     }
@@ -207,7 +228,10 @@ export default function Profile() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.coverWrap}>
-          <Pressable style={styles.coverPressable} onPress={handleCoverPhotoPress}>
+          <Pressable
+            style={styles.coverPressable}
+            onPress={handleCoverPhotoPress}
+          >
             <Image
               source={
                 profile.coverPhoto
@@ -329,7 +353,9 @@ export default function Profile() {
           style={styles.logoutButton}
           onPress={() => logout().then(() => router.push("/"))}
         >
-          <Text style={styles.logoutButtonText}>{"\u00c7\u0131k\u0131\u015f Yap"}</Text>
+          <Text style={styles.logoutButtonText}>
+            {"\u00c7\u0131k\u0131\u015f Yap"}
+          </Text>
         </Pressable>
       </ScrollView>
 
@@ -339,12 +365,14 @@ export default function Profile() {
         model={editModel}
         year={editYear}
         licensePlate={editLicensePlate}
+        inspectionAppointmentDate={editInspectionAppointmentDate}
         imageUri={editImageUri}
         isUpdating={isUpdating}
         onBrandChange={setEditBrand}
         onModelChange={setEditModel}
         onYearChange={setEditYear}
         onLicensePlateChange={setEditLicensePlate}
+        onInspectionAppointmentDateChange={setEditInspectionAppointmentDate}
         onPickImage={pickVehicleImage}
         onSave={handleUpdateVehicle}
         onClose={() => setEditModalVisible(false)}
