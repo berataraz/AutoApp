@@ -32,11 +32,11 @@ import {
 } from "react-native";
 import MapView, { Marker, type LatLng, type MapPressEvent, type Region } from "react-native-maps";
 
-const coverImage = require("../assets/images/21.jpg");
-const avatarImage = require("../assets/images/3.jpg");
-const garageOne = require("../assets/images/5.jpg");
-const garageTwo = require("../assets/images/6.jpg");
-const postImage = require("../assets/images/33.jpg");
+const coverImage = require("../../assets/images/21.jpg");
+const avatarImage = require("../../assets/images/3.jpg");
+const garageOne = require("../../assets/images/5.jpg");
+const garageTwo = require("../../assets/images/6.jpg");
+const postImage = require("../../assets/images/33.jpg");
 
 const DEFAULT_ROUTE_REGION: Region = {
   latitude: 41.0082,

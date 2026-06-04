@@ -1,8 +1,6 @@
-import { login } from "@/services/authService";
-import { useRouter } from "expo-router";
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,18 +14,6 @@ import {
 export default function Index() {
   const router = useRouter();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [email, setEmail] = useState("haluk@gmail.com");
-  const [password, setPassword] = useState("123456");
-
-  const handleLogin = async () => {
-    try {
-      await login({ email, password });
-      router.push("/home");
-   
-    } catch {
-      Alert.alert("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
-    }
-  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -38,9 +24,7 @@ export default function Index() {
         <View style={styles.content}>
           <Text style={styles.logo}>AutoTrack</Text>
 
-          <Text style={styles.helperText}>
-            Kullanıcı adı ve şifrenizi giriniz.
-          </Text>
+          <Text style={styles.helperText}>Kullanıcı adı ve şifrenizi giriniz.</Text>
 
           <TextInput
             autoCapitalize="none"
@@ -48,8 +32,6 @@ export default function Index() {
             placeholder="Kullanıcı Adı"
             placeholderTextColor="#9a9a9a"
             style={styles.input}
-            value={email}
-            onChangeText={setEmail}
           />
 
           <View style={styles.passwordField}>
@@ -60,8 +42,6 @@ export default function Index() {
               placeholderTextColor="#9a9a9a"
               secureTextEntry={!isPasswordVisible}
               style={styles.passwordInput}
-              value={password}
-              onChangeText={setPassword}
             />
             <Pressable
               accessibilityLabel={
@@ -70,13 +50,14 @@ export default function Index() {
               hitSlop={10}
               onPress={() => setIsPasswordVisible((value) => !value)}
             >
-              <Text style={styles.eyeText}>
-                {isPasswordVisible ? "Gizle" : "Göster"}
-              </Text>
+              <Text style={styles.eyeText}>{isPasswordVisible ? "Gizle" : "Göster"}</Text>
             </Pressable>
           </View>
 
-          <Pressable style={styles.primaryButton} onPress={handleLogin}>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={() => router.replace("/home")}
+          >
             <Text style={styles.primaryButtonText}>Giriş Yap</Text>
           </Pressable>
 

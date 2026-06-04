@@ -7,13 +7,13 @@ import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
-const defaultAvatar = require("../assets/images/3.jpg");
+const defaultAvatar = require("../../assets/images/3.jpg");
 
 const users = [
-  { name: "Semih \u0130lkay", image: require("../assets/images/3.jpg") },
-  { name: "jade", image: require("../assets/images/19.jpeg") },
-  { name: "madeline", image: require("../assets/images/23.jpg") },
-  { name: "katrina", image: require("../assets/images/18.jpeg") },
+  { name: "Semih \u0130lkay", image: require("../../assets/images/3.jpg") },
+  { name: "jade", image: require("../../assets/images/19.jpeg") },
+  { name: "madeline", image: require("../../assets/images/23.jpg") },
+  { name: "katrina", image: require("../../assets/images/18.jpeg") },
 ];
 
 export default function Feed() {
