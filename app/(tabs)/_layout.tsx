@@ -25,25 +25,37 @@ export default function TabsLayout() {
         options={{
           title: "Ana Sayfa",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="feed"
         options={{
-          title: "Akış",
+          title: "Ak\u0131\u015f",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "newspaper" : "newspaper-outline"} size={22} color={color} />
+            <Ionicons
+              name={focused ? "newspaper" : "newspaper-outline"}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Keşfet",
+          title: "Ke\u015ffet",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "compass" : "compass-outline"} size={22} color={color} />
+            <Ionicons
+              name={focused ? "compass" : "compass-outline"}
+              size={22}
+              color={color}
+            />
           ),
         }}
       />
@@ -52,7 +64,11 @@ export default function TabsLayout() {
         options={{
           title: "Profil",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "person-circle" : "person-circle-outline"} size={24} color={color} />
+            <Ionicons
+              name={focused ? "person-circle" : "person-circle-outline"}
+              size={24}
+              color={color}
+            />
           ),
         }}
       />

@@ -87,6 +87,14 @@ export const getExploreVehicles = async () => {
   return response.data;
 };
 
+export const setActiveVehicle = async (vehicleId: number) => {
+  const response = await api().post<string>(`/vehicle/${vehicleId}/activate`, null, {
+    headers: await getAuthHeaders(),
+  });
+
+  return response.data;
+};
+
 export const addVehicle = async (payload: AddVehicleRequest) => {
   const formData = new FormData();
 

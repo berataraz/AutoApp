@@ -1,11 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
-import { getActiveVehicle } from "@/services/vehicleService";
+import { getProfile } from "@/services/profileService";
+import {
+  getActiveVehicle,
+  setActiveVehicle as activateVehicle,
+} from "@/services/vehicleService";
 import type { Vehicle } from "@/types/domain";
 import { useFocusEffect, useRouter } from "expo-router";
 import type { ComponentProps } from "react";
 import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,6 +26,37 @@ const carImage = require("../../assets/images/5.jpg");
 const eventImage = require("../../assets/images/33.jpg");
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
+
+const TEXT = {
+  activeVehicle: "Aktif Ara\u00e7",
+  add: "Ekle",
+  addVehicle: "Ara\u00e7 ekle",
+  autoTrack: "AutoTrack",
+  change: "De\u011fi\u015ftir",
+  clubs: "Kul\u00fcpler",
+  clubsText: "Topluluklara ve garajlara bak",
+  details: "Detay",
+  emptyGarage: "Garajda ara\u00e7 yok.",
+  events: "Etkinlikler",
+  eventsText: "Bulu\u015fmalara kat\u0131l, yeni dostluklar kur",
+  expensesThisMonth: "Bu Ay",
+  explore: "Ke\u015ffet",
+  exploreText: "Ara\u00e7lar\u0131 ve rotalar\u0131 bul",
+  garage: "Garaj\u0131n",
+  inspection: "Muayene",
+  loadingGarage: "Garaj y\u00fckleniyor...",
+  noVehicle: "Ara\u00e7 se\u00e7ilmedi",
+  posts: "G\u00f6nderiler",
+  postsText: "Son payla\u015f\u0131mlar\u0131 g\u00f6r",
+  quickAccess: "H\u0131zl\u0131 Eri\u015fim",
+  reminder: "Hat\u0131rlatma",
+  reminderMaintenance: "Bak\u0131ma 3 g\u00fcn kald\u0131",
+  reminderTrackDay: "Track Day etkinli\u011fine 1 hafta kald\u0131",
+  searchPlaceholder: "Kullan\u0131c\u0131, ara\u00e7 veya rota ara",
+  selectActiveVehicle: "Aktif arac\u0131 se\u00e7",
+  selectError: "Aktif ara\u00e7 de\u011fi\u015ftirilemedi.",
+  selected: "Se\u00e7ili",
+};
 
 const formatTryAmount = (amount?: number | null) => {
   const numericAmount = Number(amount ?? 0);
@@ -41,26 +79,70 @@ const formatDisplayDate = (date?: string | null) => {
 export default function Home() {
   const router = useRouter();
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
+  const [garageVehicles, setGarageVehicles] = useState<Vehicle[]>([]);
+  const [isVehiclePickerVisible, setVehiclePickerVisible] = useState(false);
+  const [activatingVehicleId, setActivatingVehicleId] = useState<number | null>(
+    null,
+  );
+  const [isGarageLoading, setGarageLoading] = useState(true);
+
+  const fetchDashboardData = useCallback(async () => {
+    setGarageLoading(true);
+
+    const [activeResult, profileResult] = await Promise.allSettled([
+      getActiveVehicle(),
+      getProfile(),
+    ]);
+
+    if (activeResult.status === "fulfilled") {
+      setActiveVehicle(activeResult.value);
+    } else {
+      setActiveVehicle(null);
+      console.log("Active Vehicle Data error:", activeResult.reason);
+    }
+
+    if (profileResult.status === "fulfilled") {
+      setGarageVehicles(profileResult.value.garage ?? []);
+    } else {
+      console.log("Profile garage data error:", profileResult.reason);
+    }
+
+    setGarageLoading(false);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      const fetchCarData = async () => {
-        try {
-          const vehicle = await getActiveVehicle();
-          console.log("Active Vehicle Data:", vehicle);
-          setActiveVehicle(vehicle);
-        } catch (error) {
-          console.log("Active Vehicle Data error:", error);
-        }
-      };
-
-      fetchCarData();
-    }, []),
+      fetchDashboardData();
+    }, [fetchDashboardData]),
   );
 
   const vehicleTitle = activeVehicle
     ? `${activeVehicle.brand} ${activeVehicle.model}`
-    : "Ara\u00e7 se\u00e7ilmedi";
+    : TEXT.noVehicle;
+
+  const openVehiclePicker = () => {
+    setVehiclePickerVisible(true);
+  };
+
+  const handleSelectActiveVehicle = async (vehicle: Vehicle) => {
+    if (vehicle.id === activeVehicle?.id) {
+      setVehiclePickerVisible(false);
+      return;
+    }
+
+    try {
+      setActivatingVehicleId(vehicle.id);
+      await activateVehicle(vehicle.id);
+      setActiveVehicle(vehicle);
+      setVehiclePickerVisible(false);
+      fetchDashboardData();
+    } catch (error) {
+      console.log("Set active vehicle error:", error);
+      Alert.alert("Hata", TEXT.selectError);
+    } finally {
+      setActivatingVehicleId(null);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -70,8 +152,8 @@ export default function Home() {
       >
         <View style={styles.header}>
           <View style={styles.headerTextBlock}>
-            <Text style={styles.headerKicker}>{"Garaj\u0131n"}</Text>
-            <Text style={styles.logo}>AutoTrack</Text>
+            <Text style={styles.headerKicker}>{TEXT.garage}</Text>
+            <Text style={styles.logo}>{TEXT.autoTrack}</Text>
           </View>
 
           <View style={styles.headerActions}>
@@ -89,7 +171,7 @@ export default function Home() {
         <View style={styles.searchBar}>
           <Ionicons name="search" size={18} color="#a8abb3" />
           <TextInput
-            placeholder={"Kullan\u0131c\u0131, ara\u00e7 veya rota ara"}
+            placeholder={TEXT.searchPlaceholder}
             placeholderTextColor="#8f929b"
             style={styles.searchInput}
           />
@@ -97,44 +179,34 @@ export default function Home() {
 
         <View style={styles.sectionBlock}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>{"H\u0131zl\u0131 Eri\u015fim"}</Text>
+            <Text style={styles.sectionLabel}>{TEXT.quickAccess}</Text>
           </View>
 
           <View style={styles.quickGrid}>
             <QuickAction
               icon="compass-outline"
-              title="Ke\u015ffet"
-              text="Ara\u00e7lar\u0131 ve rotalar\u0131 bul"
+              title={TEXT.explore}
+              text={TEXT.exploreText}
               onPress={() => router.push("/explore")}
             />
             <QuickAction
               icon="newspaper-outline"
-              title="G\u00f6nderiler"
-              text="Son payla\u015f\u0131mlar\u0131 g\u00f6r"
+              title={TEXT.posts}
+              text={TEXT.postsText}
               onPress={() => router.push("/feed")}
             />
           </View>
 
           <QuickAction
             icon="people-outline"
-            title="Kul\u00fcpler"
-            text="Topluluklara ve garajlara bak"
+            title={TEXT.clubs}
+            text={TEXT.clubsText}
             onPress={() => router.push("/clubs")}
             wide
           />
         </View>
 
-        <Pressable
-          style={styles.vehicleCard}
-          onPress={() => {
-            if (activeVehicle) {
-              router.push("/vehicle-detail");
-              return;
-            }
-
-            router.push("/add-vehicle");
-          }}
-        >
+        <View style={styles.vehicleCard}>
           <View style={styles.vehicleImageFrame}>
             {activeVehicle?.imageUrl ? (
               <Image
@@ -149,15 +221,9 @@ export default function Home() {
           <View style={styles.vehicleInfo}>
             <View style={styles.vehicleHeaderRow}>
               <View style={styles.vehicleTitleBlock}>
-                <Text style={styles.vehicleEyebrow}>{"Aktif Ara\u00e7"}</Text>
+                <Text style={styles.vehicleEyebrow}>{TEXT.activeVehicle}</Text>
                 <Text style={styles.vehicleName} numberOfLines={1}>
                   {vehicleTitle}
-                </Text>
-              </View>
-              <View style={styles.editPill}>
-                <Ionicons name="create-outline" size={14} color="#111213" />
-                <Text style={styles.editPillText}>
-                  {activeVehicle ? "D\u00fczenle" : "Ekle"}
                 </Text>
               </View>
             </View>
@@ -165,20 +231,50 @@ export default function Home() {
             <View style={styles.vehicleStatsRow}>
               <VehicleStat
                 icon="wallet-outline"
-                label="Bu Ay"
+                label={TEXT.expensesThisMonth}
                 value={formatTryAmount(activeVehicle?.monthlyExpenseTotal)}
               />
               <View style={styles.vehicleDivider} />
               <VehicleStat
                 icon="calendar-outline"
-                label="Muayene"
+                label={TEXT.inspection}
                 value={formatDisplayDate(
                   activeVehicle?.inspectionAppointmentDate,
                 )}
               />
             </View>
+
+            <View style={styles.vehicleActionsRow}>
+              <Pressable
+                style={[styles.vehicleActionButton, styles.secondaryAction]}
+                onPress={openVehiclePicker}
+              >
+                <Ionicons name="swap-horizontal" size={15} color="#f4f4f6" />
+                <Text style={styles.secondaryActionText}>{TEXT.change}</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.vehicleActionButton, styles.primaryAction]}
+                onPress={() => {
+                  if (activeVehicle) {
+                    router.push("/vehicle-detail");
+                    return;
+                  }
+
+                  router.push("/add-vehicle");
+                }}
+              >
+                <Ionicons
+                  name={activeVehicle ? "create-outline" : "add"}
+                  size={15}
+                  color="#111213"
+                />
+                <Text style={styles.primaryActionText}>
+                  {activeVehicle ? TEXT.details : TEXT.add}
+                </Text>
+              </Pressable>
+            </View>
           </View>
-        </Pressable>
+        </View>
 
         <Pressable style={styles.activityCard} onPress={() => router.push("/feed")}>
           <View style={styles.activityTextBox}>
@@ -186,9 +282,9 @@ export default function Home() {
               <Ionicons name="flag-outline" size={18} color="#c47a2d" />
             </View>
             <View style={styles.activityCopy}>
-              <Text style={styles.activityTitle}>{"Etkinlikler"}</Text>
+              <Text style={styles.activityTitle}>{TEXT.events}</Text>
               <Text style={styles.activityText} numberOfLines={2}>
-                {"Bulu\u015fmalara kat\u0131l, yeni dostluklar kur"}
+                {TEXT.eventsText}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#8f929b" />
@@ -199,12 +295,26 @@ export default function Home() {
         <View style={styles.reminderCard}>
           <View style={styles.reminderHeader}>
             <Ionicons name="notifications-outline" size={18} color="#c47a2d" />
-            <Text style={styles.reminderTitle}>{"Hat\u0131rlatma"}</Text>
+            <Text style={styles.reminderTitle}>{TEXT.reminder}</Text>
           </View>
-          <ReminderRow text="Bak\u0131ma 3 g\u00fcn kald\u0131" />
-          <ReminderRow text="Track Day etkinli\u011fine 1 hafta kald\u0131" />
+          <ReminderRow text={TEXT.reminderMaintenance} />
+          <ReminderRow text={TEXT.reminderTrackDay} />
         </View>
       </ScrollView>
+
+      <VehiclePickerModal
+        activeVehicleId={activeVehicle?.id ?? null}
+        activatingVehicleId={activatingVehicleId}
+        isGarageLoading={isGarageLoading}
+        onAddVehicle={() => {
+          setVehiclePickerVisible(false);
+          router.push("/add-vehicle");
+        }}
+        onClose={() => setVehiclePickerVisible(false)}
+        onSelect={handleSelectActiveVehicle}
+        vehicles={garageVehicles}
+        visible={isVehiclePickerVisible}
+      />
     </SafeAreaView>
   );
 }
@@ -271,6 +381,107 @@ function VehicleStat({
   );
 }
 
+function VehiclePickerModal({
+  activeVehicleId,
+  activatingVehicleId,
+  isGarageLoading,
+  onAddVehicle,
+  onClose,
+  onSelect,
+  vehicles,
+  visible,
+}: {
+  activeVehicleId: number | null;
+  activatingVehicleId: number | null;
+  isGarageLoading: boolean;
+  onAddVehicle: () => void;
+  onClose: () => void;
+  onSelect: (vehicle: Vehicle) => void;
+  vehicles: Vehicle[];
+  visible: boolean;
+}) {
+  return (
+    <Modal
+      animationType="fade"
+      onRequestClose={onClose}
+      transparent
+      visible={visible}
+    >
+      <View style={styles.modalBackdrop}>
+        <View style={styles.vehiclePickerSheet}>
+          <View style={styles.vehiclePickerHeader}>
+            <Text style={styles.vehiclePickerTitle}>{TEXT.selectActiveVehicle}</Text>
+            <Pressable style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close" size={20} color="#f4f4f6" />
+            </Pressable>
+          </View>
+
+          {isGarageLoading ? (
+            <View style={styles.vehiclePickerStatus}>
+              <ActivityIndicator color="#c47a2d" />
+              <Text style={styles.vehiclePickerStatusText}>
+                {TEXT.loadingGarage}
+              </Text>
+            </View>
+          ) : vehicles.length > 0 ? (
+            <ScrollView style={styles.vehiclePickerList}>
+              {vehicles.map((vehicle) => {
+                const isActive = vehicle.id === activeVehicleId;
+                const isActivating = vehicle.id === activatingVehicleId;
+
+                return (
+                  <Pressable
+                    key={vehicle.id}
+                    style={styles.vehicleOption}
+                    onPress={() => onSelect(vehicle)}
+                  >
+                    <View style={styles.vehicleOptionImageFrame}>
+                      {vehicle.imageUrl ? (
+                        <Image
+                          source={{ uri: vehicle.imageUrl }}
+                          style={styles.vehicleOptionImage}
+                        />
+                      ) : (
+                        <Image source={carImage} style={styles.vehicleOptionImage} />
+                      )}
+                    </View>
+                    <View style={styles.vehicleOptionTextBlock}>
+                      <Text style={styles.vehicleOptionTitle} numberOfLines={1}>
+                        {`${vehicle.brand} ${vehicle.model}`}
+                      </Text>
+                      <Text style={styles.vehicleOptionMeta} numberOfLines={1}>
+                        {`${vehicle.year}${vehicle.licensePlate ? ` - ${vehicle.licensePlate}` : ""}`}
+                      </Text>
+                    </View>
+                    {isActivating ? (
+                      <ActivityIndicator color="#c47a2d" />
+                    ) : isActive ? (
+                      <View style={styles.selectedBadge}>
+                        <Ionicons name="checkmark" size={14} color="#111213" />
+                        <Text style={styles.selectedBadgeText}>{TEXT.selected}</Text>
+                      </View>
+                    ) : (
+                      <Ionicons name="chevron-forward" size={18} color="#7f838d" />
+                    )}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          ) : (
+            <View style={styles.vehiclePickerStatus}>
+              <Text style={styles.vehiclePickerStatusText}>{TEXT.emptyGarage}</Text>
+              <Pressable style={styles.addVehicleButton} onPress={onAddVehicle}>
+                <Ionicons name="add" size={16} color="#111213" />
+                <Text style={styles.addVehicleText}>{TEXT.addVehicle}</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 function ReminderRow({ text }: { text: string }) {
   return (
     <View style={styles.reminderRow}>
@@ -323,19 +534,29 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
   },
-  editPill: {
+  addVehicleButton: {
     alignItems: "center",
     backgroundColor: "#c47a2d",
     borderRadius: 8,
     flexDirection: "row",
-    gap: 5,
-    height: 30,
-    paddingHorizontal: 9,
+    gap: 6,
+    height: 38,
+    justifyContent: "center",
+    marginTop: 14,
+    paddingHorizontal: 14,
   },
-  editPillText: {
+  addVehicleText: {
     color: "#111213",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "900",
+  },
+  closeButton: {
+    alignItems: "center",
+    backgroundColor: "#24272e",
+    borderRadius: 8,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
   },
   header: {
     alignItems: "center",
@@ -371,6 +592,19 @@ const styles = StyleSheet.create({
   logo: {
     color: "#f4f4f6",
     fontSize: 28,
+    fontWeight: "900",
+  },
+  modalBackdrop: {
+    backgroundColor: "rgba(0, 0, 0, 0.56)",
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  primaryAction: {
+    backgroundColor: "#c47a2d",
+  },
+  primaryActionText: {
+    color: "#111213",
+    fontSize: 12,
     fontWeight: "900",
   },
   quickAction: {
@@ -482,6 +716,16 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     height: "100%",
   },
+  secondaryAction: {
+    backgroundColor: "#24272e",
+    borderColor: "#343842",
+    borderWidth: 1,
+  },
+  secondaryActionText: {
+    color: "#f4f4f6",
+    fontSize: 12,
+    fontWeight: "900",
+  },
   sectionBlock: {
     marginHorizontal: 20,
     marginTop: 18,
@@ -497,6 +741,33 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
   },
+  selectedBadge: {
+    alignItems: "center",
+    backgroundColor: "#c47a2d",
+    borderRadius: 8,
+    flexDirection: "row",
+    gap: 4,
+    height: 28,
+    paddingHorizontal: 8,
+  },
+  selectedBadgeText: {
+    color: "#111213",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  vehicleActionButton: {
+    alignItems: "center",
+    borderRadius: 8,
+    flex: 1,
+    flexDirection: "row",
+    gap: 6,
+    height: 34,
+    justifyContent: "center",
+  },
+  vehicleActionsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
   vehicleCard: {
     alignItems: "center",
     backgroundColor: "#111213",
@@ -507,7 +778,7 @@ const styles = StyleSheet.create({
     gap: 13,
     marginHorizontal: 20,
     marginTop: 18,
-    minHeight: 126,
+    minHeight: 154,
     padding: 12,
   },
   vehicleDivider: {
@@ -534,13 +805,13 @@ const styles = StyleSheet.create({
   vehicleImageFrame: {
     backgroundColor: "#24262c",
     borderRadius: 8,
-    height: 92,
+    height: 104,
     overflow: "hidden",
-    width: 92,
+    width: 96,
   },
   vehicleInfo: {
     flex: 1,
-    gap: 15,
+    gap: 13,
     minWidth: 0,
   },
   vehicleName: {
@@ -548,6 +819,77 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "900",
     lineHeight: 21,
+  },
+  vehicleOption: {
+    alignItems: "center",
+    backgroundColor: "#1f2227",
+    borderColor: "#30333b",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 10,
+    padding: 10,
+  },
+  vehicleOptionImage: {
+    height: "100%",
+    width: "100%",
+  },
+  vehicleOptionImageFrame: {
+    backgroundColor: "#24262c",
+    borderRadius: 8,
+    height: 52,
+    overflow: "hidden",
+    width: 58,
+  },
+  vehicleOptionMeta: {
+    color: "#9da0a8",
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 3,
+  },
+  vehicleOptionTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  vehicleOptionTitle: {
+    color: "#f4f4f6",
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  vehiclePickerHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  vehiclePickerList: {
+    maxHeight: 390,
+  },
+  vehiclePickerSheet: {
+    backgroundColor: "#111213",
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    paddingBottom: 24,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+  },
+  vehiclePickerStatus: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 130,
+  },
+  vehiclePickerStatusText: {
+    color: "#cfd0d3",
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  vehiclePickerTitle: {
+    color: "#f4f4f6",
+    fontSize: 18,
+    fontWeight: "900",
   },
   vehicleStat: {
     flex: 1,
