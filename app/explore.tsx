@@ -19,9 +19,9 @@ import {
   View,
 } from "react-native";
 
-const carFallback = require("../../assets/images/6.jpg");
-const clubOne = require("../../assets/images/33.jpg");
-const clubTwo = require("../../assets/images/21.jpg");
+const carFallback = require("../assets/images/6.jpg");
+const clubOne = require("../assets/images/33.jpg");
+const clubTwo = require("../assets/images/21.jpg");
 
 const TEXT = {
   clubs: "Kul\u00fcpler",

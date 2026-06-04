@@ -1,97 +1,102 @@
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import {
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { FormField } from "@/components/forms/FormField";
+import { getProfile, updateProfile } from "@/services/profileService";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { Alert, Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 export default function EditProfile() {
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+
+  const handleUpdate = async () => {
+    try {
+      setLoading(true);
+      await updateProfile({
+        name,
+        lastName,
+        phoneNumber,
+      });
+
+      Alert.alert("Ba\u015far\u0131l\u0131", "Profil g\u00fcncellendi.");
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Hata", "Profil g\u00fcncellenirken bir sorun olu\u015ftu.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const data = await getProfile();
+        setName(data.name || "");
+        setLastName(data.lastName || "");
+        setEmail(data.email || "");
+        setPhoneNumber(data.phoneNumber || "");
+      } catch {
+        Alert.alert("Hata", "Profil bilgileri al\u0131namad\u0131.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.content}>
-        <Pressable style={styles.homeButton} onPress={() => router.replace("/home")}>
-          <Ionicons name="home-outline" size={20} color="#202124" />
+        <Text style={styles.title}>{"Profil D\u00fczenle"}</Text>
+        <Text style={styles.sectionTitle}>{"Ki\u015fisel Bilgiler"}</Text>
+
+        <FormField label="Ad" value={name} onChangeText={setName} />
+        <FormField label="Soyad" value={lastName} onChangeText={setLastName} />
+        <FormField label="E-posta" value={email} onChangeText={setEmail} />
+        <FormField
+          label="Telefon"
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+        />
+
+        <Pressable
+          style={styles.wideButton}
+          onPress={() => router.push("/add-vehicle")}
+        >
+          <Text style={styles.buttonText}>{"Ara\u00e7 Ekle"}</Text>
         </Pressable>
-        <Text style={styles.title}>Profil Düzenle</Text>
-        <Text style={styles.sectionTitle}>Kişisel Bilgiler</Text>
 
-        <Field label="Ad" value="John" />
-        <Field label="Soyad" value="Doe" />
-        <Field label="E posta" placeholder="Eposta adresini yazınız" />
-        <Field label="Telefon" placeholder="telefon numarası giriniz" />
-
-        <Pressable style={styles.wideButton} onPress={() => router.push("/add-car")}>
-          <Text style={styles.buttonText}>Araç Ekle</Text>
-        </Pressable>
-
-        <Pressable style={styles.saveButton} onPress={() => router.push("/profile")}>
-          <Text style={styles.buttonText}>Kaydet</Text>
+        <Pressable
+          style={styles.saveButton}
+          onPress={handleUpdate}
+          disabled={loading}
+        >
+          <Text style={styles.buttonText}>
+            {loading ? "Bekleyin..." : "Kaydet"}
+          </Text>
         </Pressable>
       </View>
     </SafeAreaView>
   );
 }
 
-function Field({
-  label,
-  value,
-  placeholder,
-}: {
-  label: string;
-  value?: string;
-  placeholder?: string;
-}) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      <TextInput
-        defaultValue={value}
-        placeholder={placeholder}
-        placeholderTextColor="#6f7075"
-        style={styles.input}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#242528" },
-  content: { flex: 1, paddingHorizontal: 34, paddingTop: 54 },
-  homeButton: {
-    alignItems: "center",
-    alignSelf: "flex-end",
-    backgroundColor: "#f4f4f4",
-    borderRadius: 18,
-    height: 36,
-    justifyContent: "center",
-    marginBottom: 8,
-    width: 36,
-  },
-  title: { color: "#f3f3f4", fontSize: 34, fontWeight: "800", marginBottom: 30 },
-  sectionTitle: { color: "#f3f3f4", fontSize: 20, fontWeight: "800", marginBottom: 16 },
-  field: { marginBottom: 16 },
-  label: { color: "#e7e7e9", fontSize: 18, fontWeight: "800", marginBottom: 8, paddingLeft: 14 },
-  input: {
-    backgroundColor: "#0c0c0e",
-    borderRadius: 8,
-    color: "#f5f5f5",
+  buttonText: {
+    color: "#f7f7f7",
     fontSize: 16,
-    height: 46,
-    paddingHorizontal: 18,
+    fontWeight: "700",
   },
-  wideButton: {
-    alignItems: "center",
-    backgroundColor: "#c77d2b",
-    borderRadius: 8,
-    height: 48,
-    justifyContent: "center",
-    marginTop: 18,
+  content: {
+    flex: 1,
+    paddingHorizontal: 34,
+    paddingTop: 54,
+  },
+  safeArea: {
+    backgroundColor: "#242528",
+    flex: 1,
   },
   saveButton: {
     alignItems: "center",
@@ -103,5 +108,24 @@ const styles = StyleSheet.create({
     marginTop: 84,
     width: 178,
   },
-  buttonText: { color: "#f7f7f7", fontSize: 16, fontWeight: "700" },
+  sectionTitle: {
+    color: "#f3f3f4",
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 16,
+  },
+  title: {
+    color: "#f3f3f4",
+    fontSize: 34,
+    fontWeight: "800",
+    marginBottom: 30,
+  },
+  wideButton: {
+    alignItems: "center",
+    backgroundColor: "#c77d2b",
+    borderRadius: 8,
+    height: 48,
+    justifyContent: "center",
+    marginTop: 18,
+  },
 });

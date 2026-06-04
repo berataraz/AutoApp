@@ -1,7 +1,10 @@
+import { register } from "@/services/authService";
+import { router } from "expo-router";
 import { useState } from "react";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
   StyleSheet,
@@ -11,62 +14,108 @@ import {
 } from "react-native";
 
 export default function Register() {
-  const router = useRouter();
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [name, setName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
+
+  const handleRegister = async () => {
+    try {
+      await register({
+        name,
+        lastName,
+        email,
+        username,
+        password,
+      });
+      Alert.alert("Kayıt başarılı! Giriş yapılıyor...");
+      router.push("/home");
+    } catch (error) {
+      Alert.alert("Kayıt sırasında bir hata oluştu. Lütfen tekrar deneyin.");
+      console.log("Kayıt hatası:", error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.content}>
-        <Pressable style={styles.homeButton} onPress={() => router.replace("/home")}>
-          <Ionicons name="home-outline" size={20} color="#202124" />
-        </Pressable>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.screen}
+      >
+        <View style={styles.content}>
+          <Text style={styles.logo}>AutoTrack</Text>
+          <Text style={styles.title}>Kayıt Ol</Text>
 
-        <Text style={styles.logo}>AutoTrack</Text>
-        <Text style={styles.title}>Kayıt Ol</Text>
+          <TextInput
+            placeholder="Ad"
+            placeholderTextColor="#9a9a9a"
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+          />
 
-        <TextInput placeholder="Ad" placeholderTextColor="#9a9a9a" style={styles.input} />
-        <TextInput placeholder="Soyad" placeholderTextColor="#9a9a9a" style={styles.input} />
-        <TextInput
-          autoCapitalize="none"
-          keyboardType="email-address"
-          placeholder="Mail Adresi"
-          placeholderTextColor="#9a9a9a"
-          style={styles.input}
-        />
-        <TextInput
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="Kullanıcı Adı"
-          placeholderTextColor="#9a9a9a"
-          style={styles.input}
-        />
+          <TextInput
+            placeholder="Soyad"
+            placeholderTextColor="#9a9a9a"
+            style={styles.input}
+            value={lastName}
+            onChangeText={setLastName}
+          />
 
-        <View style={styles.passwordField}>
+          <TextInput
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="Mail Adresi"
+            placeholderTextColor="#9a9a9a"
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+          />
+
           <TextInput
             autoCapitalize="none"
             autoCorrect={false}
-            placeholder="Parola"
+            placeholder="Kullanıcı Adı"
             placeholderTextColor="#9a9a9a"
-            secureTextEntry={!isPasswordVisible}
-            style={styles.passwordInput}
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
           />
-          <Pressable
-            accessibilityLabel={isPasswordVisible ? "Parolayı gizle" : "Parolayı göster"}
-            hitSlop={10}
-            onPress={() => setIsPasswordVisible((value) => !value)}
-          >
-            <Text style={styles.eyeText}>{isPasswordVisible ? "Gizle" : "Göster"}</Text>
+
+          <View style={styles.passwordField}>
+            <TextInput
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Parola"
+              placeholderTextColor="#9a9a9a"
+              secureTextEntry={!isPasswordVisible}
+              style={styles.passwordInput}
+              value={password}
+              onChangeText={setPassword}
+            />
+            <Pressable
+              accessibilityLabel={
+                isPasswordVisible ? "Parolayı gizle" : "Parolayı göster"
+              }
+              hitSlop={10}
+              onPress={() => setIsPasswordVisible((value) => !value)}
+            >
+              <Text style={styles.eyeText}>
+                {isPasswordVisible ? "Gizle" : "Göster"}
+              </Text>
+            </Pressable>
+          </View>
+
+          <Pressable onPress={handleRegister} style={styles.registerButton}>
+            <Text style={styles.registerButtonText}>Kayıt Ol</Text>
           </Pressable>
-        </View>
 
-        <Pressable style={styles.registerButton} onPress={() => router.replace("/home")}>
-          <Text style={styles.registerButtonText}>Kayıt Ol</Text>
-        </Pressable>
-
-        <Pressable onPress={() => router.push("/")}>
           <Text style={styles.loginText}>Zaten hesabınız var mı?</Text>
-        </Pressable>
-      </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -76,22 +125,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#242426",
   },
+  screen: {
+    flex: 1,
+    backgroundColor: "#242426",
+  },
   content: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 30,
-  },
-  homeButton: {
-    alignItems: "center",
-    backgroundColor: "#f4f4f4",
-    borderRadius: 18,
-    height: 36,
-    justifyContent: "center",
-    position: "absolute",
-    right: 0,
-    top: 0,
-    width: 36,
   },
   logo: {
     color: "#bf7a32",

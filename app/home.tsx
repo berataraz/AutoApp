@@ -13,8 +13,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const carImage = require("../../assets/images/5.jpg");
-const eventImage = require("../../assets/images/33.jpg");
+const carImage = require("../assets/images/5.jpg");
+const eventImage = require("../assets/images/33.jpg");
 
 const formatTryAmount = (amount?: number | null) => {
   const numericAmount = Number(amount ?? 0);
