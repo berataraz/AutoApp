@@ -1,6 +1,8 @@
+import { Ionicons } from "@expo/vector-icons";
 import { getActiveVehicle } from "@/services/vehicleService";
 import type { Vehicle } from "@/types/domain";
 import { useFocusEffect, useRouter } from "expo-router";
+import type { ComponentProps } from "react";
 import { useCallback, useState } from "react";
 import {
   Image,
@@ -15,6 +17,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const carImage = require("../../assets/images/5.jpg");
 const eventImage = require("../../assets/images/33.jpg");
+
+type IconName = ComponentProps<typeof Ionicons>["name"];
 
 const formatTryAmount = (amount?: number | null) => {
   const numericAmount = Number(amount ?? 0);
@@ -54,6 +58,10 @@ export default function Home() {
     }, []),
   );
 
+  const vehicleTitle = activeVehicle
+    ? `${activeVehicle.brand} ${activeVehicle.model}`
+    : "Ara\u00e7 se\u00e7ilmedi";
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
@@ -61,345 +69,513 @@ export default function Home() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Pressable
-            style={styles.iconButton}
-            onPress={() => router.push("/profile")}
-          >
-            <Text style={styles.iconText}>{"\u25cb"}</Text>
-          </Pressable>
-
-          <Text style={styles.logo}>AutoTrack</Text>
-
-          <Pressable style={styles.iconButton}>
-            <Text style={styles.bellText}>{"\u2302"}</Text>
-          </Pressable>
-        </View>
-
-        <TextInput
-          placeholder={"Kullan\u0131c\u0131 Ara ..."}
-          placeholderTextColor="#eee2cf"
-          style={styles.searchInput}
-        />
-
-        <View style={styles.featureRow}>
-          <Pressable
-            style={styles.featureCard}
-            onPress={() => router.push("/explore")}
-          >
-            <Text style={styles.featureTitle}>{"Ke\u015ffet"}</Text>
-            <Text style={styles.featureText}>
-              {"Ara\u00e7 tutkunlar\u0131n\u0131 ke\u015ffet"}
-            </Text>
-            <Image source={carImage} style={styles.featureImage} />
-          </Pressable>
-          <Pressable
-            style={styles.featureCard}
-            onPress={() => router.push("/feed")}
-          >
-            <Text style={styles.featureTitle}>{"G\u00f6nderiler"}</Text>
-            <Text style={styles.featureText}>
-              {"Dostlar\u0131n\u0131z\u0131n g\u00f6nderilerini ke\u015ffet"}
-            </Text>
-          </Pressable>
-          <Pressable
-            style={styles.featureCard}
-            onPress={() => router.push("/clubs")}
-          >
-            <Text style={styles.featureTitle}>{"Kul\u00fcpler"}</Text>
-            <Text style={styles.featureText}>
-              {"Ara\u00e7 tutkunlar\u0131 ile sohbet et, deneyimlerini payla\u015f"}
-            </Text>
-          </Pressable>
-        </View>
-
-        <Pressable style={styles.activityCard}>
-          <View style={styles.activityTextBox}>
-            <Text style={styles.sectionTitle}>Etkinlikler</Text>
-            <Text style={styles.bodyText}>{"Bulu\u015fmalara kat\u0131l,"}</Text>
-            <Text style={styles.bodyText}>{"yeni dostluklar kur"}</Text>
+          <View style={styles.headerTextBlock}>
+            <Text style={styles.headerKicker}>{"Garaj\u0131n"}</Text>
+            <Text style={styles.logo}>AutoTrack</Text>
           </View>
-          <Image source={eventImage} style={styles.activityImage} />
-        </Pressable>
+
+          <View style={styles.headerActions}>
+            <IconButton
+              icon="person-circle-outline"
+              onPress={() => router.push("/profile")}
+            />
+            <IconButton
+              icon="add"
+              onPress={() => router.push("/add-vehicle")}
+            />
+          </View>
+        </View>
+
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={18} color="#a8abb3" />
+          <TextInput
+            placeholder={"Kullan\u0131c\u0131, ara\u00e7 veya rota ara"}
+            placeholderTextColor="#8f929b"
+            style={styles.searchInput}
+          />
+        </View>
+
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>{"H\u0131zl\u0131 Eri\u015fim"}</Text>
+          </View>
+
+          <View style={styles.quickGrid}>
+            <QuickAction
+              icon="compass-outline"
+              title="Ke\u015ffet"
+              text="Ara\u00e7lar\u0131 ve rotalar\u0131 bul"
+              onPress={() => router.push("/explore")}
+            />
+            <QuickAction
+              icon="newspaper-outline"
+              title="G\u00f6nderiler"
+              text="Son payla\u015f\u0131mlar\u0131 g\u00f6r"
+              onPress={() => router.push("/feed")}
+            />
+          </View>
+
+          <QuickAction
+            icon="people-outline"
+            title="Kul\u00fcpler"
+            text="Topluluklara ve garajlara bak"
+            onPress={() => router.push("/clubs")}
+            wide
+          />
+        </View>
 
         <Pressable
           style={styles.vehicleCard}
           onPress={() => {
-            if (activeVehicle) router.push("/vehicle-detail");
+            if (activeVehicle) {
+              router.push("/vehicle-detail");
+              return;
+            }
+
+            router.push("/add-vehicle");
           }}
         >
           <View style={styles.vehicleImageFrame}>
             {activeVehicle?.imageUrl ? (
               <Image
                 source={{ uri: activeVehicle.imageUrl }}
-                style={styles.activityVehicleImage}
+                style={styles.vehicleImage}
               />
             ) : (
-              <Text style={styles.vehicleImagePlaceholder}>AT</Text>
+              <Image source={carImage} style={styles.vehicleImage} />
             )}
           </View>
+
           <View style={styles.vehicleInfo}>
             <View style={styles.vehicleHeaderRow}>
               <View style={styles.vehicleTitleBlock}>
                 <Text style={styles.vehicleEyebrow}>{"Aktif Ara\u00e7"}</Text>
                 <Text style={styles.vehicleName} numberOfLines={1}>
-                  {activeVehicle
-                    ? `${activeVehicle.brand} ${activeVehicle.model}`
-                    : "-"}
+                  {vehicleTitle}
                 </Text>
               </View>
-              <Text style={styles.vehicleEditText}>{"D\u00fczenle"}</Text>
+              <View style={styles.editPill}>
+                <Ionicons name="create-outline" size={14} color="#111213" />
+                <Text style={styles.editPillText}>
+                  {activeVehicle ? "D\u00fczenle" : "Ekle"}
+                </Text>
+              </View>
             </View>
+
             <View style={styles.vehicleStatsRow}>
-              <View style={styles.vehicleStat}>
-                <Text style={styles.vehicleStatLabel}>{"Bu Ay"}</Text>
-                <Text style={styles.vehicleStatValue}>
-                  {formatTryAmount(activeVehicle?.monthlyExpenseTotal)}
-                </Text>
-              </View>
+              <VehicleStat
+                icon="wallet-outline"
+                label="Bu Ay"
+                value={formatTryAmount(activeVehicle?.monthlyExpenseTotal)}
+              />
               <View style={styles.vehicleDivider} />
-              <View style={styles.vehicleStat}>
-                <Text style={styles.vehicleStatLabel}>{"Muayene"}</Text>
-                <Text style={styles.vehicleStatValue}>
-                  {formatDisplayDate(activeVehicle?.inspectionAppointmentDate)}
-                </Text>
-              </View>
+              <VehicleStat
+                icon="calendar-outline"
+                label="Muayene"
+                value={formatDisplayDate(
+                  activeVehicle?.inspectionAppointmentDate,
+                )}
+              />
             </View>
           </View>
         </Pressable>
 
+        <Pressable style={styles.activityCard} onPress={() => router.push("/feed")}>
+          <View style={styles.activityTextBox}>
+            <View style={styles.activityIcon}>
+              <Ionicons name="flag-outline" size={18} color="#c47a2d" />
+            </View>
+            <View style={styles.activityCopy}>
+              <Text style={styles.activityTitle}>{"Etkinlikler"}</Text>
+              <Text style={styles.activityText} numberOfLines={2}>
+                {"Bulu\u015fmalara kat\u0131l, yeni dostluklar kur"}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#8f929b" />
+          </View>
+          <Image source={eventImage} style={styles.activityImage} />
+        </Pressable>
+
         <View style={styles.reminderCard}>
-          <Text style={styles.reminderTitle}>{"Hat\u0131rlatma"}</Text>
-          <Text style={styles.reminderText}>{"\u2022 Bak\u0131ma 3 g\u00fcn kald\u0131 !"}</Text>
-          <Text style={styles.reminderText}>
-            {"\u2022 Track Day etkinli\u011fine 1 hafta kald\u0131."}
-          </Text>
+          <View style={styles.reminderHeader}>
+            <Ionicons name="notifications-outline" size={18} color="#c47a2d" />
+            <Text style={styles.reminderTitle}>{"Hat\u0131rlatma"}</Text>
+          </View>
+          <ReminderRow text="Bak\u0131ma 3 g\u00fcn kald\u0131" />
+          <ReminderRow text="Track Day etkinli\u011fine 1 hafta kald\u0131" />
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+function IconButton({ icon, onPress }: { icon: IconName; onPress: () => void }) {
+  return (
+    <Pressable style={styles.iconButton} onPress={onPress}>
+      <Ionicons name={icon} size={22} color="#f4f4f6" />
+    </Pressable>
+  );
+}
+
+function QuickAction({
+  icon,
+  onPress,
+  text,
+  title,
+  wide = false,
+}: {
+  icon: IconName;
+  onPress: () => void;
+  text: string;
+  title: string;
+  wide?: boolean;
+}) {
+  return (
+    <Pressable
+      style={[styles.quickAction, wide ? styles.quickActionWide : null]}
+      onPress={onPress}
+    >
+      <View style={styles.quickIconBox}>
+        <Ionicons name={icon} size={20} color="#c47a2d" />
+      </View>
+      <View style={styles.quickTextBlock}>
+        <Text style={styles.quickTitle}>{title}</Text>
+        <Text style={styles.quickText} numberOfLines={2}>
+          {text}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color="#7f838d" />
+    </Pressable>
+  );
+}
+
+function VehicleStat({
+  icon,
+  label,
+  value,
+}: {
+  icon: IconName;
+  label: string;
+  value: string;
+}) {
+  return (
+    <View style={styles.vehicleStat}>
+      <View style={styles.vehicleStatLabelRow}>
+        <Ionicons name={icon} size={14} color="#8f929b" />
+        <Text style={styles.vehicleStatLabel}>{label}</Text>
+      </View>
+      <Text style={styles.vehicleStatValue} numberOfLines={1}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+function ReminderRow({ text }: { text: string }) {
+  return (
+    <View style={styles.reminderRow}>
+      <View style={styles.reminderDot} />
+      <Text style={styles.reminderText}>{text}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   activityCard: {
-    alignItems: "stretch",
-    backgroundColor: "#2f313a",
-    flexDirection: "row",
-    height: 100,
-    marginHorizontal: 24,
-    marginTop: 20,
-  },
-  activityImage: {
+    backgroundColor: "#1f2227",
+    borderColor: "#2f333b",
     borderRadius: 8,
-    height: 100,
-    width: 100,
+    borderWidth: 1,
+    marginHorizontal: 20,
+    marginTop: 16,
+    overflow: "hidden",
   },
-  activityTextBox: {
+  activityCopy: {
     flex: 1,
-    justifyContent: "center",
-    paddingLeft: 10,
-    paddingVertical: 8,
+    gap: 3,
   },
-  activityVehicleImage: {
-    height: "100%",
-    width: "100%",
-  },
-  bellText: {
-    color: "#202124",
-    fontSize: 22,
-    fontWeight: "800",
-  },
-  bodyText: {
-    color: "#cfd0d3",
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  featureCard: {
-    backgroundColor: "#282a33",
-    borderRadius: 8,
-    borderTopLeftRadius: 54,
-    borderTopRightRadius: 54,
-    flex: 1,
-    height: 150,
-    paddingHorizontal: 18,
-    paddingTop: 24,
-  },
-  featureImage: {
-    alignSelf: "center",
-    borderRadius: 8,
-    height: 50,
-    marginTop: 18,
-    width: 100,
-  },
-  featureRow: {
-    backgroundColor: "#a8732b",
-    flexDirection: "row",
-    gap: 20,
-    paddingBottom: 44,
-    paddingHorizontal: 22,
-    paddingTop: 12,
-  },
-  featureText: {
-    color: "#e3e3e5",
-    fontSize: 12,
-    lineHeight: 21,
-  },
-  featureTitle: {
-    color: "#c47a2d",
-    fontSize: 16,
-    fontWeight: "500",
-    marginBottom: 4,
-  },
-  header: {
+  activityIcon: {
     alignItems: "center",
-    backgroundColor: "#a8732b",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingBottom: 14,
-    paddingHorizontal: 28,
-    paddingTop: 20,
-  },
-  iconButton: {
-    alignItems: "center",
-    backgroundColor: "#f4f4f4",
-    borderRadius: 18,
+    backgroundColor: "#2b2d32",
+    borderRadius: 8,
     height: 36,
     justifyContent: "center",
     width: 36,
   },
-  iconText: {
-    color: "#202124",
-    fontSize: 28,
+  activityImage: {
+    height: 104,
+    width: "100%",
+  },
+  activityText: {
+    color: "#b9bbc2",
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  activityTextBox: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 12,
+    padding: 14,
+  },
+  activityTitle: {
+    color: "#f3f4f6",
+    fontSize: 17,
+    fontWeight: "900",
+  },
+  editPill: {
+    alignItems: "center",
+    backgroundColor: "#c47a2d",
+    borderRadius: 8,
+    flexDirection: "row",
+    gap: 5,
+    height: 30,
+    paddingHorizontal: 9,
+  },
+  editPillText: {
+    color: "#111213",
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  header: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  headerKicker: {
+    color: "#9da0a8",
+    fontSize: 12,
     fontWeight: "800",
-    lineHeight: 30,
+    marginBottom: 1,
+  },
+  headerTextBlock: {
+    flex: 1,
+  },
+  iconButton: {
+    alignItems: "center",
+    backgroundColor: "#24272e",
+    borderColor: "#343842",
+    borderRadius: 8,
+    borderWidth: 1,
+    height: 40,
+    justifyContent: "center",
+    width: 40,
   },
   logo: {
-    color: "#f1f1f1",
+    color: "#f4f4f6",
     fontSize: 28,
-    fontWeight: "800",
+    fontWeight: "900",
+  },
+  quickAction: {
+    alignItems: "center",
+    backgroundColor: "#1f2227",
+    borderColor: "#2f333b",
+    borderRadius: 8,
+    borderWidth: 1,
+    flex: 1,
+    flexDirection: "row",
+    gap: 10,
+    minHeight: 90,
+    padding: 12,
+  },
+  quickActionWide: {
+    marginTop: 10,
+  },
+  quickGrid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  quickIconBox: {
+    alignItems: "center",
+    backgroundColor: "#2b2d32",
+    borderRadius: 8,
+    height: 38,
+    justifyContent: "center",
+    width: 38,
+  },
+  quickText: {
+    color: "#aeb1ba",
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 16,
+  },
+  quickTextBlock: {
+    flex: 1,
+    gap: 3,
+    minWidth: 0,
+  },
+  quickTitle: {
+    color: "#f3f4f6",
+    fontSize: 15,
+    fontWeight: "900",
   },
   reminderCard: {
     backgroundColor: "#111213",
-    marginHorizontal: 24,
-    marginTop: 12,
-    minHeight: 116,
-    paddingHorizontal: 20,
-    paddingTop: 8,
+    borderColor: "#24262c",
+    borderRadius: 8,
+    borderWidth: 1,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+  },
+  reminderDot: {
+    backgroundColor: "#c47a2d",
+    borderRadius: 3,
+    height: 6,
+    marginTop: 8,
+    width: 6,
+  },
+  reminderHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  reminderRow: {
+    flexDirection: "row",
+    gap: 9,
+    marginTop: 7,
   },
   reminderText: {
     color: "#cfd0d3",
-    fontSize: 15,
-    lineHeight: 23,
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 21,
   },
   reminderTitle: {
-    color: "#c47a2d",
-    fontSize: 24,
-    fontWeight: "500",
-    marginBottom: 10,
-    textAlign: "center",
+    color: "#f4f4f6",
+    fontSize: 17,
+    fontWeight: "900",
   },
   safeArea: {
-    backgroundColor: "#000000",
+    backgroundColor: "#191a1c",
     flex: 1,
   },
   scrollContent: {
     backgroundColor: "#191a1c",
-    paddingBottom: 28,
+    paddingBottom: 92,
+  },
+  searchBar: {
+    alignItems: "center",
+    backgroundColor: "#111213",
+    borderColor: "#272a31",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 10,
+    height: 46,
+    marginHorizontal: 20,
+    paddingHorizontal: 14,
   },
   searchInput: {
-    backgroundColor: "#b18752",
-    borderRadius: 18,
     color: "#ffffff",
-    fontSize: 13,
+    flex: 1,
+    fontSize: 14,
     fontWeight: "700",
-    height: 36,
-    marginHorizontal: 28,
-    marginTop: -2,
-    paddingHorizontal: 16,
+    height: "100%",
   },
-  sectionTitle: {
-    color: "#c47a2d",
-    fontSize: 24,
-    fontWeight: "500",
+  sectionBlock: {
+    marginHorizontal: 20,
+    marginTop: 18,
+  },
+  sectionHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  sectionLabel: {
+    color: "#dfe0e4",
+    fontSize: 16,
+    fontWeight: "900",
   },
   vehicleCard: {
     alignItems: "center",
     backgroundColor: "#111213",
-    borderColor: "#24262c",
-    borderRadius: 12,
+    borderColor: "#2b2e35",
+    borderRadius: 8,
     borderWidth: 1,
     flexDirection: "row",
-    gap: 14,
+    gap: 13,
+    marginHorizontal: 20,
+    marginTop: 18,
     minHeight: 126,
-    marginHorizontal: 24,
-    marginTop: 20,
-    padding: 14,
+    padding: 12,
   },
   vehicleDivider: {
-    backgroundColor: "#34363d",
-    height: 34,
+    backgroundColor: "#30333a",
+    height: 42,
     width: 1,
-  },
-  vehicleEditText: {
-    color: "#c47a2d",
-    fontSize: 12,
-    fontWeight: "800",
-    paddingLeft: 8,
   },
   vehicleEyebrow: {
     color: "#c47a2d",
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 11,
+    fontWeight: "900",
     marginBottom: 2,
   },
   vehicleHeaderRow: {
     alignItems: "flex-start",
     flexDirection: "row",
+    gap: 10,
     justifyContent: "space-between",
   },
-  vehicleImageFrame: {
-    alignItems: "center",
-    backgroundColor: "#24262c",
-    borderRadius: 10,
-    height: 88,
-    justifyContent: "center",
-    overflow: "hidden",
-    width: 88,
+  vehicleImage: {
+    height: "100%",
+    width: "100%",
   },
-  vehicleImagePlaceholder: {
-    color: "#c47a2d",
-    fontSize: 18,
-    fontWeight: "800",
+  vehicleImageFrame: {
+    backgroundColor: "#24262c",
+    borderRadius: 8,
+    height: 92,
+    overflow: "hidden",
+    width: 92,
   },
   vehicleInfo: {
     flex: 1,
-    gap: 14,
+    gap: 15,
+    minWidth: 0,
   },
   vehicleName: {
     color: "#f0f0f1",
-    fontSize: 16,
-    fontWeight: "800",
-    lineHeight: 20,
+    fontSize: 17,
+    fontWeight: "900",
+    lineHeight: 21,
   },
   vehicleStat: {
     flex: 1,
-    gap: 3,
+    gap: 5,
+    minWidth: 0,
   },
   vehicleStatLabel: {
     color: "#8f929b",
-    fontSize: 12,
-    fontWeight: "800",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  vehicleStatLabelRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 4,
   },
   vehicleStatValue: {
-    color: "#d7d8dc",
+    color: "#e2e4e9",
     fontSize: 14,
-    fontWeight: "700",
+    fontWeight: "900",
   },
   vehicleStatsRow: {
     alignItems: "center",
     flexDirection: "row",
-    gap: 12,
+    gap: 11,
   },
   vehicleTitleBlock: {
     flex: 1,
+    minWidth: 0,
   },
 });
