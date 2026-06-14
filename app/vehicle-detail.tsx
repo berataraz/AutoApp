@@ -1,122 +1,343 @@
+import { DatePickerField } from "@/components/forms/DatePickerField";
+import { getActiveVehicle, updateVehicle } from "@/services/vehicleService";
+import type { Vehicle } from "@/types/domain";
+import { getSecureImageUrl } from "@/utils/imageUrl";
+import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import {
-  Image,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
-const carImage = require("../assets/images/16.jpeg");
-
 export default function VehicleDetail() {
   const router = useRouter();
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [brand, setBrand] = useState("");
+  const [model, setModel] = useState("");
+  const [year, setYear] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
+  const [inspectionAppointmentDate, setInspectionAppointmentDate] =
+    useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      try {
+        const activeVehicle = await getActiveVehicle();
+        setVehicle(activeVehicle);
+        setBrand(activeVehicle.brand);
+        setModel(activeVehicle.model);
+        setYear(activeVehicle.year.toString());
+        setLicensePlate(activeVehicle.licensePlate ?? "");
+        setInspectionAppointmentDate(
+          activeVehicle.inspectionAppointmentDate ?? "",
+        );
+      } catch (error) {
+        console.log("Vehicle detail fetch error:", error);
+        Alert.alert("Hata", "Aktif ara\u00e7 bilgileri al\u0131namad\u0131.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicle();
+  }, []);
+
+  const pickVehicleImage = async () => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      Alert.alert("Hata", "Foto\u011fraf galerisine eri\u015fim izni gerekiyor.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.5,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!vehicle) return;
+
+    const parsedYear = parseInt(year, 10);
+    if (!brand.trim() || !model.trim() || Number.isNaN(parsedYear)) {
+      Alert.alert(
+        "Uyar\u0131",
+        "L\u00fctfen marka, model ve y\u0131l alanlar\u0131n\u0131 doldurun.",
+      );
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updatedVehicle = await updateVehicle(vehicle.id, {
+        brand: brand.trim(),
+        model: model.trim(),
+        year: parsedYear,
+        licensePlate: licensePlate.trim(),
+        inspectionAppointmentDate,
+        imageUri,
+      });
+
+      setVehicle(updatedVehicle);
+      setImageUri(null);
+      setInspectionAppointmentDate(
+        updatedVehicle.inspectionAppointmentDate ?? "",
+      );
+      Alert.alert("Ba\u015far\u0131l\u0131", "Ara\u00e7 bilgileri g\u00fcncellendi.");
+    } catch (error) {
+      console.error("Vehicle update error:", error);
+      Alert.alert("Hata", "Ara\u00e7 g\u00fcncellenirken bir sorun olu\u015ftu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const imageSource = imageUri
+    ? { uri: imageUri }
+    : vehicle?.imageUrl
+      ? { uri: getSecureImageUrl(vehicle.imageUrl) }
+      : undefined;
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color="#a8732b" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.content}>
-        <Pressable style={styles.homeButton} onPress={() => router.replace("/home")}>
-          <Ionicons name="home-outline" size={20} color="#202124" />
-        </Pressable>
-        <Text style={styles.title}>Aracım</Text>
-        <Text style={styles.carName}>Skoda Fabia 1.2 TSI (2016)</Text>
-
-        <View style={styles.summaryCard}>
-          <View style={styles.summaryText}>
-            <Text style={styles.cardTitle}>ÖZET</Text>
-            <Text style={styles.infoText}>Toplam Harcama: ₺6.450</Text>
-            <Text style={styles.infoText}>Mevcut Lastik: Kış</Text>
-            <Text style={styles.infoText}>Son Bakım: 18/05/2025</Text>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.screen}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.header}>
+            <Pressable onPress={() => router.back()} hitSlop={12}>
+              <Text style={styles.backText}>Geri</Text>
+            </Pressable>
+            <Text style={styles.headerTitle}>{"Araç Düzenle"}</Text>
+            <View style={styles.headerSpacer} />
           </View>
-          <Image source={carImage} style={styles.carImage} />
-        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Hızlı Aksiyonlar</Text>
-          <Action label="Bakım Ekle:" value="Tarih Seç" />
-          <Action label="Harcama Ekle:" value="Harcama" />
-        </View>
+          <Pressable style={styles.imageBox} onPress={pickVehicleImage}>
+            {imageSource ? (
+              <Image
+                source={imageSource}
+                style={styles.vehicleImage}
+                contentFit="cover"
+                transition={200}
+              />
+            ) : (
+              <Text style={styles.imagePlaceholder}>{"Araç Resmi Seç"}</Text>
+            )}
+            <View style={styles.imageAction}>
+              <Text style={styles.imageActionText}>
+                {imageSource ? "Resmi De\u011fi\u015ftir" : "Resim Ekle"}
+              </Text>
+            </View>
+          </Pressable>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Lastik Bilgileri</Text>
-          <Action label="Son Değişim:" value="12.11.2025" />
-          <Action label="Sonraki Değişim:" value="04.06.2026" />
-        </View>
+          <View style={styles.form}>
+            <Text style={styles.label}>Marka</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="BMW"
+              placeholderTextColor="#85858a"
+              value={brand}
+              onChangeText={setBrand}
+            />
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Son İşlemler</Text>
-          <Text style={styles.infoText}>Yakıt eklendi - ₺950</Text>
-          <Text style={styles.infoText}>Bakım yapıldı - ₺2.300</Text>
-          <Text style={styles.infoText}>Lastik değişimi - ₺500</Text>
-        </View>
-      </View>
+            <Text style={styles.label}>Model</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="M3 Competition"
+              placeholderTextColor="#85858a"
+              value={model}
+              onChangeText={setModel}
+            />
+
+            <Text style={styles.label}>{"Yıl"}</Text>
+            <TextInput
+              style={styles.input}
+              keyboardType="numeric"
+              maxLength={4}
+              placeholder="2023"
+              placeholderTextColor="#85858a"
+              value={year}
+              onChangeText={setYear}
+            />
+
+            <Text style={styles.label}>
+              Plaka <Text style={styles.optional}>(Opsiyonel)</Text>
+            </Text>
+            <TextInput
+              style={styles.input}
+              autoCapitalize="characters"
+              placeholder="34 ABC 123"
+              placeholderTextColor="#85858a"
+              value={licensePlate}
+              onChangeText={setLicensePlate}
+            />
+
+            <DatePickerField
+              label="Muayene Randevu Tarihi"
+              value={inspectionAppointmentDate}
+              onChange={setInspectionAppointmentDate}
+              optional
+            />
+          </View>
+
+          <Pressable
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Kaydet</Text>
+            )}
+          </Pressable>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-function Action({ label, value }: { label: string; value: string }) {
-  const router = useRouter();
-
-  return (
-    <View style={styles.actionRow}>
-      <Text style={styles.actionLabel}>{label}</Text>
-      <Pressable style={styles.actionValue} onPress={() => router.push("/add-car")}>
-        <Text style={styles.actionValueText}>{value}</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#242528" },
-  content: { flex: 1, paddingHorizontal: 30, paddingTop: 54 },
-  homeButton: {
-    alignItems: "center",
-    alignSelf: "flex-end",
-    backgroundColor: "#f4f4f4",
-    borderRadius: 18,
-    height: 36,
-    justifyContent: "center",
-    marginBottom: 8,
-    width: 36,
+  backText: {
+    color: "#d3d3d6",
+    fontSize: 15,
+    fontWeight: "700",
   },
-  title: { color: "#f2f2f4", fontSize: 36, fontWeight: "800", marginBottom: 16 },
-  carName: { color: "#f2f2f4", fontSize: 21, fontWeight: "800", marginBottom: 10 },
-  summaryCard: {
-    backgroundColor: "#37383f",
-    borderRadius: 8,
+  content: {
+    padding: 22,
+    paddingBottom: 34,
+  },
+  form: {
+    gap: 12,
+  },
+  header: {
+    alignItems: "center",
     flexDirection: "row",
-    minHeight: 116,
-    padding: 12,
-    marginBottom: 28,
+    justifyContent: "space-between",
+    marginBottom: 20,
   },
-  summaryText: { flex: 1 },
-  carImage: {
-    alignSelf: "center",
-    borderRadius: 8,
-    height: 70,
-    resizeMode: "contain",
-    width: 114,
+  headerSpacer: {
+    width: 34,
   },
-  card: { backgroundColor: "#37383f", borderRadius: 8, marginBottom: 28, padding: 14 },
-  cardTitle: { color: "#f0f0f2", fontSize: 14, fontWeight: "800", marginBottom: 12 },
-  infoText: { color: "#e1e1e5", fontSize: 15, lineHeight: 24 },
-  actionRow: { alignItems: "center", flexDirection: "row", marginBottom: 12 },
-  actionLabel: { color: "#e1e1e5", flex: 1, fontSize: 15 },
-  actionValue: {
+  headerTitle: {
+    color: "#f2f2f2",
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  imageAction: {
+    backgroundColor: "rgba(0,0,0,0.62)",
+    borderRadius: 6,
+    bottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    position: "absolute",
+    right: 12,
+  },
+  imageActionText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  imageBox: {
     alignItems: "center",
-    backgroundColor: "#202027",
+    backgroundColor: "#2a2b30",
+    borderColor: "#3a3b40",
     borderRadius: 8,
-    height: 36,
+    borderWidth: 1,
+    height: 190,
     justifyContent: "center",
+    marginBottom: 22,
     overflow: "hidden",
-    width: 154,
   },
-  actionValueText: {
-    color: "#f3f3f5",
+  imagePlaceholder: {
+    color: "#b9b9bd",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  input: {
+    backgroundColor: "#2a2b30",
+    borderRadius: 8,
+    color: "#fff",
+    fontSize: 15,
+    height: 50,
+    paddingHorizontal: 16,
+  },
+  label: {
+    color: "#f0f0f1",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  loadingBox: {
+    alignItems: "center",
+    flex: 1,
+    justifyContent: "center",
+  },
+  optional: {
+    color: "#a9a9ae",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  safeArea: {
+    backgroundColor: "#17181a",
+    flex: 1,
+  },
+  saveButton: {
+    alignItems: "center",
+    backgroundColor: "#a8732b",
+    borderRadius: 8,
+    height: 52,
+    justifyContent: "center",
+    marginTop: 24,
+  },
+  saveButtonDisabled: {
+    backgroundColor: "#6e4b1c",
+  },
+  saveButtonText: {
+    color: "#fff",
     fontSize: 16,
     fontWeight: "800",
+  },
+  screen: {
+    flex: 1,
+  },
+  vehicleImage: {
+    height: "100%",
+    width: "100%",
   },
 });

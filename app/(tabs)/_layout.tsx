@@ -1,30 +1,42 @@
-import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
   return (
     <Tabs
+      initialRouteName="home"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: "#c47a2d",
-        tabBarInactiveTintColor: "#a7a7ad",
+        tabBarInactiveTintColor: "#8f929b",
         tabBarLabelStyle: { fontSize: 11, fontWeight: "700" },
         tabBarStyle: {
-          backgroundColor: "#161719",
-          borderTopColor: "#2c2d31",
+          backgroundColor: "#111213",
+          borderTopColor: "#24262c",
+          borderTopWidth: 1,
           height: 66,
           paddingBottom: 8,
-          paddingTop: 8,
-        },
-        tabBarItemStyle: {
-          paddingTop: 2,
+          paddingTop: 6,
         },
       }}
     >
       <Tabs.Screen
+        name="home"
+        options={{
+          title: "Ana Sayfa",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={22}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="feed"
         options={{
-          title: "Akış",
+          title: "Ak\u0131\u015f",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "newspaper" : "newspaper-outline"}
@@ -37,23 +49,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="explore"
         options={{
-          title: "Keşfet",
+          title: "Ke\u015ffet",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? "compass" : "compass-outline"}
-              size={22}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="home"
-        options={{
-          title: "Ana Ekran",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
               size={22}
               color={color}
             />
